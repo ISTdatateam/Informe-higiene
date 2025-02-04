@@ -182,7 +182,12 @@ def main():
                             obs_puertas = st.text_input(f"Observaciones puertas - Área {i}", key=f"obs_puertas_{i}")
                             condiciones_disconfort = st.text_input(f"Otras condiciones de disconfort térmico - Área {i}", key=f"cond_{i}")
                             obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - Área {i}", key=f"obs_cond_{i}")
-                        evidencia = st.text_input(f"Evidencia fotográfica (URL(s) separadas por coma) - Área {i}", key=f"evidencia_{i}")
+
+                        st.title("Captura de Foto desde la Cámara")
+                        # Widget para capturar una foto
+                        foto = st.camera_input("Toma una foto:- Área {i}", key=f"foto_{i}")
+                        if foto is not None:
+                            st.image(foto, caption="Foto capturada", use_column_width=True)
 
                         areas_data.append({
                             "Area o sector": area_sector,
@@ -211,7 +216,7 @@ def main():
                             "Observaciones puertas": obs_puertas,
                             "Otras condiciones de disconfort térmico": condiciones_disconfort,
                             "Observaciones sobre disconfort térmico": obs_condiciones,
-                            "Evidencia fotográfica": evidencia,
+                            "Evidencia fotográfica": foto,
                         })
 
             # ==============================================
