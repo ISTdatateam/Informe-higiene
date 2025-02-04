@@ -176,19 +176,17 @@ def main():
                             condiciones_disconfort = st.text_input(f"Otras condiciones de disconfort térmico - Área {i}", key=f"cond_{i}")
                             obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - Área {i}", key=f"obs_cond_{i}")
 
-                        # Captura de foto: Se usa una variable de session_state propia para cada área
-                        if f"mostrar_camara_area_{i}" not in st.session_state:
-                            st.session_state[f"mostrar_camara_area_{i}"] = False
-
-                        if st.button(f"Activar cámara para Área {i}", key=f"btn_cam_{i}"):
-                            st.session_state[f"mostrar_camara_area_{i}"] = True
+                        st.markdown("##### Evidencia fotográfica")
+                        # Captura de foto: Usamos un checkbox para activar la cámara (no se permite st.button() en un form)
+                        activar_cam = st.checkbox(f"Activar cámara para Área {i}", key=f"chk_cam_{i}")
+                        st.session_state[f"mostrar_camara_area_{i}"] = activar_cam
 
                         if st.session_state[f"mostrar_camara_area_{i}"]:
                             foto = st.camera_input(f"Toma una foto - Área {i}", key=f"foto_{i}")
                             if foto is not None:
                                 st.image(foto, caption=f"Foto capturada - Área {i}", use_column_width=True)
                         else:
-                            foto = None  # No se capturó foto
+                            foto = None
 
                         areas_data.append({
                             "Area o sector": area_sector,
