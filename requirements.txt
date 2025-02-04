@@ -1,6 +1,4 @@
-data_access
 streamlit
 pandas
-datetime
 python-docx
 requests
