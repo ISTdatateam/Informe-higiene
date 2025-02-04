@@ -1,0 +1,6 @@
+data_access
+streamlit
+pandas
+datetime
+docx
+requests
