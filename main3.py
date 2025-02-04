@@ -6,6 +6,8 @@ from data_access import get_data  # Función que obtiene el CSV principal
 from doc_utils import generar_informe_en_word  # Función para generar el Word
 
 
+st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
+
 def main():
     st.title("Informes Confort Térmico")
     st.write("")
