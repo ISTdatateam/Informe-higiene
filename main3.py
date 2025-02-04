@@ -184,10 +184,22 @@ def main():
                             obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - Área {i}", key=f"obs_cond_{i}")
 
                         st.title("Captura de Foto desde la Cámara")
-                        # Widget para capturar una foto
-                        foto = st.camera_input("Toma una foto:- Área {i}", key=f"foto_{i}")
-                        if foto is not None:
-                            st.image(foto, caption="Foto capturada", use_column_width=True)
+                        # Inicializamos la variable en session_state para controlar la cámara.
+                        if "mostrar_camara" not in st.session_state:
+                            st.session_state.mostrar_camara = False
+
+                        st.title("Captura de Foto con Activación Manual")
+
+                        # Botón para activar la cámara
+                        if st.button("Activar cámara"):
+                            st.session_state.mostrar_camara = True
+
+                        # Una vez activada, se muestra el widget de la cámara en un pequeño frame.
+                        if st.session_state.mostrar_camara:
+                            foto = st.camera_input(f"Toma una foto:- Área {i}", key=f"foto_{i}")
+                            if foto is not None:
+                                st.image(foto, caption="Foto capturada", use_column_width=True)
+
 
                         areas_data.append({
                             "Area o sector": area_sector,
