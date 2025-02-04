@@ -104,12 +104,13 @@ def main():
                     hora_medicion = st.time_input("Hora de medición", value=time(hour=9, minute=0))
                     temp_max = st.number_input("Temperatura máxima del día (°C)", min_value=-50.0, max_value=60.0,
                                                value=25.0, step=0.1)
+
+                    motivo_evaluacion = st.selectbox("Motivo de evaluación",
+                                                     options=["Programa anual", "Solicitud empresa", "Fiscalización"])
                     nombre_personal = st.text_input("Nombre del personal SMU")
                     cargo = st.text_input("Cargo")
                     correo_ist = st.text_input("Profesional IST (Correo)")
                     vestimenta = st.text_input("Tipo de vestimenta utilizada")
-                    motivo_evaluacion = st.selectbox("Motivo de evaluación",
-                                                     options=["Programa anual", "Solicitud empresa", "Fiscalización"])
                     motivo_evaluacion = st.radio("Motivo de evaluación",
                                                  options=["Programa anual", "Solicitud empresa", "Fiscalización"])
 
