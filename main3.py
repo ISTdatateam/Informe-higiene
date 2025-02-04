@@ -5,9 +5,6 @@ from datetime import datetime, date, time
 from data_access import get_data  # Función que obtiene el CSV principal
 from doc_utils import generar_informe_en_word  # Función para generar el Word
 
-from PIL import Image
-import io
-
 st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 
 def main():
@@ -110,14 +107,14 @@ def main():
         # Para el equipo de temperatura:
         cod_equipo_t = st.selectbox(
             "Equipo temperatura",
-            options=["T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
+            options=["","T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
                      "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20"]
         )
 
         # Para el equipo de velocidad del aire:
         cod_equipo_v = st.selectbox(
             "Equipo velocidad aire",
-            options=["V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
+            options=["","V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
                      "V11", "V12", "V13", "V14", "V15"]
         )
 
@@ -144,11 +141,11 @@ def main():
                 st.markdown(f"### Área {i}")
                 col1, col2 = st.columns(2)
                 with col1:
-                    area_sector = st.selectbox(f"Área o sector (Área {i})", key=f"area_{i}", value="",
-                    options=["Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"])
+                    area_sector = st.selectbox(f"Área o sector (Área {i})", key=f"area_{i}",
+                    options=["","Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"])
 
-                    espec_sector = st.text_input(f"Especificación sector (Área {i})", key=f"espec_{i}", value="",
-                    options=["Centro", "Izquierda", "Derecha"])
+                    espec_sector = st.text_input(f"Especificación sector (Área {i})", key=f"espec_{i}",
+                    options=["","Centro", "Izquierda", "Derecha"])
 
                     tbs = st.number_input(f"Temperatura bulbo seco (°C) - Área {i}", value=0.0, step=0.1, key=f"tbs_{i}")
                     tg = st.number_input(f"Temperatura globo (°C) - Área {i}", value=0.0, step=0.1, key=f"tg_{i}")
@@ -265,11 +262,11 @@ def main():
                     "Verificación TBS final": verif_tbs_final,
                     "Verificación TBH final": verif_tbh_final,
                     "Verificación TG final": verif_tg_final,
-                    "Patrón utilizado para calibrar": patron_calibracion,
+                    #"Patrón utilizado para calibrar": patron_calibracion,
                     "Patrón TBS": patron_tbs,
                     "Patrón TBH": patron_tbh,
                     "Patrón TG": patron_tg,
-                    "Tipo de vestimenta utilizada": vestimenta,
+                    #"Tipo de vestimenta utilizada": vestimenta,
                     "Motivo de evaluación": motivo_evaluacion,
                     "Comentarios finales de evaluación": comentarios_finales,
                 },
