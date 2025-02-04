@@ -178,15 +178,10 @@ def main():
 
                         st.markdown("##### Evidencia fotográfica")
                         # Captura de foto: Usamos un checkbox para activar la cámara (no se permite st.button() en un form)
-                        activar_cam = st.checkbox(f"Activar cámara para Área {i}", key=f"chk_cam_{i}")
-                        st.session_state[f"mostrar_camara_area_{i}"] = activar_cam
-
-                        if st.session_state[f"mostrar_camara_area_{i}"]:
-                            foto = st.camera_input(f"Toma una foto - Área {i}", key=f"foto_{i}")
-                            if foto is not None:
-                                st.image(foto, caption=f"Foto capturada - Área {i}", use_column_width=True)
-                        else:
-                            foto = None
+                        foto = st.file_uploader(f"Adjunta una foto para el Área {i}", type=["png", "jpg", "jpeg"],
+                                                key=f"foto_{i}")
+                        if foto is not None:
+                            st.image(foto, caption=f"Foto cargada - Área {i}", use_column_width=True)
 
                         areas_data.append({
                             "Area o sector": area_sector,
