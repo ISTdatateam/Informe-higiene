@@ -181,7 +181,7 @@ def main():
                         foto = st.file_uploader(f"Adjunta una foto para el Área {i}", type=["png", "jpg", "jpeg"],
                                                 key=f"foto_{i}")
                         if foto is not None:
-                            st.image(foto, caption=f"Foto cargada - Área {i}", use_column_width=True)
+                            st.image(foto, caption=f"Foto cargada - Área {i}", use_column_width=True, width=150)
 
                         areas_data.append({
                             "Area o sector": area_sector,
