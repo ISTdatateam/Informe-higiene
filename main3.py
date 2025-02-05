@@ -29,7 +29,7 @@ def interpret_pmv(pmv_value):
 def main():
     st.header("Informes Confort Térmico")
     st.write("")
-    st.write("Versión 2.1.20250205")
+    st.write("Versión 2.2.20250205")
     st.write("")
 
     # --- Carga de CSVs ---
@@ -139,7 +139,7 @@ def main():
             # 4: Mediciones de Áreas (10 áreas fijas)
             st.markdown("---")
             st.subheader("Mediciones de Áreas")
-            st.info("Pincha en el nombre de área para agregar información")
+            st.info("Selecciona un área para agregar información")
             # Se crean 10 sub-tabs, uno por cada área
             area_tabs = st.tabs([f"Área {i}" for i in range(1, 11)])
             areas_data = []
@@ -163,7 +163,7 @@ def main():
 
                     posicion_trabajador = st.selectbox(
                         f"Medición a trabajadores área {i}",
-                        options=["Seleccione...", "De pie - 1.10m", "Sentado - 0.600"],
+                        options=["Seleccione...", "De pie - 1.10 m", "Sentado - 0.60 m"],
                         index=0,
                         key=f"pos_{i}"
                     )
@@ -186,35 +186,32 @@ def main():
 
                     st.markdown(f"#### Condiciones del área {i}")
 
-                    st.write("La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.")
-                    techumbre = st.select_slider(f"Techumbre - Área {i}", key=f"techumbre_{i}", options=["Sí", "No"])
-                    st.write("Opción:", techumbre)
-
-                    obs_techumbre = st.text_input(f"Observación techumbre - Área {i}", key=f"obs_techumbre_{i}")
+                    techumbre = st.select_slider(f"**La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.**", key=f"techumbre_{i}", options=["Sí", "No"])
+                    obs_techumbre = st.text_input(f"Observación techumbre - obligatorio en caso de disconformidad", key=f"obs_techumbre_{i}")
                     st.write("")
-                    paredes = st.text_input(f"Paredes - Área {i}", key=f"paredes_{i}")
-                    obs_paredes = st.text_input(f"Observación paredes - Área {i}", key=f"obs_paredes_{i}")
+                    paredes = st.select_slider(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}", options=["Sí", "No"])
+                    obs_paredes = st.text_input(f"Observación paredes - obligatorio en caso de disconformidad", key=f"obs_paredes_{i}")
                     st.write("")
-                    ventanales = st.text_input(f"Ventanales - Área {i}", key=f"ventanales_{i}")
-                    obs_ventanales = st.text_input(f"Observación ventanales - Área {i}", key=f"obs_ventanales_{i}")
+                    ventanales = st.select_slider(f"**Los ventanales del área en los cuales incide directamente el sol, cuentan con algún tipo de material aislante, tales como laminas de protección solar, cortinas, gigantografías que proporcionen un apantallamiento.**", key=f"ventanales_{i}" , options=["Sí", "No"])
+                    obs_ventanales = st.text_input(f"Observación ventanales - obligatorio en caso de disconformidad", key=f"obs_ventanales_{i}")
                     st.write("")
-                    aire_acond = st.text_input(f"Aire acondicionado - Área {i}", key=f"aire_{i}")
-                    obs_aire_acond = st.text_input(f"Observaciones aire acondicionado - Área {i}", key=f"obs_aire_{i}")
+                    aire_acond = st.select_slider(f"**El área cuenta con sistema de aire acondicionado y/o enfriador de aire, que proporcione movimiento de aire frío, con el fin de mejorar el confort para los trabajadores. Indicar temperatura de funcionamiento (°C).**", key=f"aire_{i}", options=["Sí", "No"])
+                    obs_aire_acond = st.text_input(f"Observaciones aire acondicionado - obligatorio especificar cantidad y operatividad.", key=f"obs_aire_{i}")
                     st.write("")
-                    ventiladores = st.text_input(f"Ventiladores - Área {i}", key=f"venti_{i}")
-                    obs_ventiladores = st.text_input(f"Observaciones ventiladores - Área {i}", key=f"obs_venti_{i}")
+                    ventiladores = st.select_slider(f"**El área cuenta con ventiladores que proporcionan movimiento de aire, con el fin de mejorar el confort para los trabajadores.**", key=f"venti_{i}", options=["Sí", "No"])
+                    obs_ventiladores = st.text_input(f"Observaciones ventiladores - obligatorio especificar cantidad y operatividad.", key=f"obs_venti_{i}")
                     st.write("")
-                    inyeccion_extrac = st.text_input(f"Inyección y/o extracción de aire - Área {i}", key=f"inye_{i}")
-                    obs_inyeccion = st.text_input(f"Observaciones inyección/extracción de aire - Área {i}", key=f"obs_inye_{i}")
+                    inyeccion_extrac = st.select_slider(f"**El área cuenta con inyección y/o extracción de aire.**", key=f"inye_{i}", options=["Sí", "No"])
+                    obs_inyeccion = st.text_input(f"Observaciones inyección/extracción de aire - obligatorio especificar cantidad y operatividad.", key=f"obs_inye_{i}")
                     st.write("")
-                    ventanas = st.text_input(f"Ventanas (ventilación natural) - Área {i}", key=f"ventana_{i}")
-                    obs_ventanas = st.text_input(f"Observaciones ventanas - Área {i}", key=f"obs_ventana_{i}")
+                    ventanas = st.select_slider(f"**El área evaluada cuenta con ventanas que permiten la entrada de aire fresco y la salida de aire caliente, favoreciendo así la ventilación natural.", key=f"ventana_{i}", options=["Sí", "No"])
+                    obs_ventanas = st.text_input(f"Observaciones ventanas - obligatorio en caso de disconformidad", key=f"obs_ventana_{i}")
                     st.write("")
-                    puertas = st.text_input(f"Puertas (ventilación natural) - Área {i}", key=f"puertas_{i}")
-                    obs_puertas = st.text_input(f"Observaciones puertas - Área {i}", key=f"obs_puertas_{i}")
+                    puertas = st.select_slider(f"**El área evaluada cuenta con puertas que proporcionan una vía adicional para la ventilación natural, al permitir la circulación del aire de forma controlada.**", key=f"puertas_{i}", options=["Sí", "No"])
+                    obs_puertas = st.text_input(f"Observaciones puertas - obligatorio en caso de disconformidad", key=f"obs_puertas_{i}")
                     st.write("")
-                    condiciones_disconfort = st.text_input(f"Otras condiciones de disconfort térmico - Área {i}", key=f"cond_{i}")
-                    obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - Área {i}", key=f"obs_cond_{i}")
+                    condiciones_disconfort = st.select_slider(f"**El area presenta otras condiciones que pueden considerarse como causantes de disconfort térmico, que no hayan sido indicadas en los puntos anteriores.**", key=f"cond_{i}", options=["Sí", "No"])
+                    obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - obligatorio en caso de presencia", key=f"obs_cond_{i}")
 
                     st.markdown(f"#### Evidencia fotográfica del área {i}")
                     foto = st.file_uploader(f"Adjunta una foto para el Área {i}", type=["png", "jpg", "jpeg"], key=f"foto_{i}")
@@ -251,9 +248,9 @@ def main():
                         "Observaciones sobre disconfort térmico": obs_condiciones,
                         "Evidencia fotográfica": foto,
                     })
-
-            # 5: Fin
             st.markdown("---")
+            submitted = st.form_submit_button("Guardar información")
+            # 5: Fin
             st.subheader("Cierre")
             verif_tbs_final = st.text_input("Verificación TBS final")
             verif_tbh_final = st.text_input("Verificación TBH final")
@@ -261,8 +258,7 @@ def main():
             comentarios_finales = st.text_area("Comentarios finales de evaluación")
 
             # Botón de envío del formulario
-            st.markdown("---")
-            submitted = st.form_submit_button("Guardar información")
+            #submitted = st.form_submit_button("Guardar información")
 
             if submitted:
                 # Consolidar los datos en una estructura para enviar a la función generadora del Word
