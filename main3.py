@@ -12,7 +12,7 @@ st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 def main():
     st.header("Informes Confort Térmico")
     st.write("")
-    st.write("Versión 1.7.20250205")
+    st.write("Versión 2.0.20250205")
     st.write("")
 
     # --- Carga de CSVs ---
