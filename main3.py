@@ -189,8 +189,17 @@ def main():
                     techumbre = st.pills(f"**La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.**", key=f"techumbre_{i}", options=["Sí", "No"])
                     obs_techumbre = st.text_input(f"Observación techumbre - obligatorio en caso de disconformidad", key=f"obs_techumbre_{i}")
                     st.write("")
-                    paredes = st.select_slider(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}", options=["Sí", "No"])
-                    obs_paredes = st.text_input(f"Observación paredes - obligatorio en caso de disconformidad", key=f"obs_paredes_{i}")
+                    #paredes = st.select_slider(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}", options=["Sí", "No"])
+
+                    paredes = st.toggle(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}")
+                    if paredes:
+                        st.write("Cumple condición")
+                    else:
+                        st.write("Completa la observación")
+
+                    obs_paredes = st.text_input(f"Observación paredes - obligatorio en caso de disconformidad",
+                                                key=f"obs_paredes_{i}")
+
                     st.write("")
                     ventanales = st.select_slider(f"**Los ventanales del área en los cuales incide directamente el sol, cuentan con algún tipo de material aislante, tales como laminas de protección solar, cortinas, gigantografías que proporcionen un apantallamiento.**", key=f"ventanales_{i}" , options=["Sí", "No"])
                     obs_ventanales = st.text_input(f"Observación ventanales - obligatorio en caso de disconformidad", key=f"obs_ventanales_{i}")
