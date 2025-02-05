@@ -92,7 +92,8 @@ def main():
             temp_max = st.number_input("Temperatura máxima del día (°C)", min_value=-50.0, max_value=60.0,
                                        value=25.0, step=0.1)
             motivo_evaluacion = st.radio("Motivo de evaluación",
-                                         options=["Programa anual", "Solicitud empresa", "Fiscalización"])
+                                         options=["Seleccione..","Programa anual", "Solicitud empresa", "Fiscalización"],
+                                         index=0)
             nombre_personal = st.text_input("Nombre del personal SMU")
             cargo = st.text_input("Cargo", value="Administador/a")
             consultor_ist = st.text_input("Consultor IST")
@@ -101,12 +102,12 @@ def main():
             st.subheader("Calibración y otros datos")
             cod_equipo_t = st.selectbox(
                 "Equipo temperatura",
-                options=["", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
+                options=["Seleccione..", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
                          "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20"]
             )
             cod_equipo_v = st.selectbox(
                 "Equipo velocidad aire",
-                options=["", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
+                options=["Seleccione..", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
                          "V11", "V12", "V13", "V14", "V15"]
             )
             patron_tbs = st.number_input("Patrón TBS", value=46.4, step=0.1)
@@ -139,22 +140,18 @@ def main():
                     vel_aire = st.number_input(f"Velocidad del aire (m/s) - Área {i}", min_value=0.0,
                                                max_value=20.0, value=0.0, step=0.1, key=f"vel_{i}")
 
-                    puesto_trabajo = st.radio(f"Puesto de trabajo - Área {i}",
-                                               options=["Seleccione...","Cajera", "Reponedor", "Bodeguero", "Recepcionista", "Otra"],
-                                               index=0,
-                                               key=f"puesto_{i}")
+                    puesto_trabajo = st.radio(
+                        f"Puesto de trabajo - Área {i}",
+                        options=["Seleccione...", "Cajera", "Reponedor", "Bodeguero", "Recepcionista", "Otra"],
+                        index=0,
+                        key=f"puesto_{i}"
+                    )
 
-                    if puesto_trabajo == "Seleccione...":
-                        st.error("El campo 'Puesto de trabajo' es obligatorio.")
-                    else:
-                        st.write("Valor seleccionado:", puesto_trabajo)
-
-
-                    posicion_trabajador = st.multiselect(f"Medición a trabajadores - Área {i}",
-                                                   options=["De pie - 1.10m", "Sentado - 0.600"],
-                                                   default=[],
-                                                   max_selections=1,
-                                                   key=f"pos_{i}")
+                    posicion_trabajador = st.multiselect(
+                        f"Medición a trabajadores - Área {i}",
+                        options=["Seleccione...", "De pie - 1.10m", "Sentado - 0.600"],
+                        index=0,
+                        key=f"pos_{i}")
 
 
 
