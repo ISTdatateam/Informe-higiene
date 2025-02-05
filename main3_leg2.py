@@ -39,9 +39,6 @@ def main():
         st.session_state["df_info_cuv"] = pd.DataFrame()
     if "input_cuv_str" not in st.session_state:
         st.session_state["input_cuv_str"] = ""
-    # Se inicializa la variable para guardar las mediciones de áreas, en caso de que no exista.
-    if "areas_data" not in st.session_state:
-        st.session_state["areas_data"] = []
 
     # --- Búsqueda por CUV ---
     input_cuv = st.text_input("Ingresa el CUV: ej. 183885 ")
@@ -85,8 +82,10 @@ def main():
 
         st.write("")
 
+
         # --- Formulario (st.form) ---
         with st.form("informe_form"):
+
             # 2: Inicio
             st.subheader("Datos de la visita")
 
@@ -95,8 +94,8 @@ def main():
             temp_max = st.number_input("Temperatura máxima del día (°C)", min_value=-50.0, max_value=60.0,
                                        value=25.0, step=0.1)
             motivo_evaluacion = st.selectbox("Motivo de evaluación",
-                                             options=["Seleccione...", "Programa anual", "Solicitud empresa", "Fiscalización"],
-                                             index=0)
+                                         options=["Seleccione...","Programa anual", "Solicitud empresa", "Fiscalización"],
+                                         index=0)
             nombre_personal = st.text_input("Nombre del personal SMU")
             cargo = st.text_input("Cargo", value="Administador/a")
             consultor_ist = st.text_input("Consultor IST")
@@ -124,20 +123,20 @@ def main():
             # 4: Mediciones de Áreas (10 áreas fijas)
             st.markdown("---")
             st.subheader("Mediciones de Áreas")
-            st.info("Pincha en el nombre de área para agregar información")
+            st.info("Pincha en el nombre de area para agregar información")
             # Se crean 10 sub-tabs, uno por cada área
             area_tabs = st.tabs([f"Área {i}" for i in range(1, 11)])
             areas_data = []
             for i, area_tab in enumerate(area_tabs, start=1):
                 with area_tab:
                     st.markdown(f"#### Identificación del Área {i}")
-                    # Widgets de identificación del área
+                    # En layout de una única columna, se muestran los widgets secuencialmente
                     area_sector = st.selectbox(f"Área {i}",
-                                               options=["Seleccione...", "Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"],
-                                               key=f"area_{i}")
-                    espec_sector = st.selectbox(f"Sector específico dentro de área {i}",
-                                                options=["Seleccione...", "Centro", "Izquierda", "Derecha"],
-                                                key=f"espec_{i}")
+                                           options=["Seleccione...", "Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"],
+                                           key=f"area_{i}")
+                    espec_sector = st.selectbox(f"Sector especifico dentro de área {i}",
+                                            options=["Seleccione...", "Centro", "Izquierda", "Derecha"],
+                                            key=f"espec_{i}")
 
                     puesto_trabajo = st.selectbox(
                         f"Puesto de trabajo área {i}",
@@ -150,15 +149,13 @@ def main():
                         f"Medición a trabajadores área {i}",
                         options=["Seleccione...", "De pie - 1.10m", "Sentado - 0.600"],
                         index=0,
-                        key=f"pos_{i}"
-                    )
+                        key=f"pos_{i}")
 
                     vestimenta = st.selectbox(
                         f"Vestimenta trabajadores área {i}",
                         options=["Seleccione...", "Vestimenta habitual", "Vestimenta de invierno"],
                         index=0,
-                        key=f"ves_{i}"
-                    )
+                        key=f"ves_{i}")
 
                     st.markdown(f"#### Mediciones del área {i}")
 
@@ -170,6 +167,7 @@ def main():
                                                max_value=20.0, value=0.0, step=0.1, key=f"vel_{i}")
 
                     st.markdown(f"#### Condiciones del área {i}")
+
 
                     techumbre = st.text_input(f"Techumbre - Área {i}", key=f"techumbre_{i}")
                     obs_techumbre = st.text_input(f"Observación techumbre - Área {i}", key=f"obs_techumbre_{i}")
@@ -198,7 +196,8 @@ def main():
                     condiciones_disconfort = st.text_input(f"Otras condiciones de disconfort térmico - Área {i}", key=f"cond_{i}")
                     obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - Área {i}", key=f"obs_cond_{i}")
 
-                    st.markdown(f"#### Evidencia fotográfica del área {i}")
+                    st.markdown(f"#### Evidencia fotográfica del área  {i}")
+                    # Se usa un file uploader para adjuntar una foto (que en móviles puede abrir la cámara)
                     foto = st.file_uploader(f"Adjunta una foto para el Área {i}", type=["png", "jpg", "jpeg"], key=f"foto_{i}")
                     if foto is not None:
                         st.image(foto, caption=f"Foto cargada área {i}", use_column_width=True)
@@ -283,53 +282,33 @@ def main():
                 }
 
                 st.success("¡Formulario enviado correctamente!")
-                #st.json(datos_informe)  # Para debug: muestra el JSON generado
-
-                # Guardar la información de las áreas en session_state para la calculadora
-                st.session_state["areas_data"] = areas_data
+                st.json(datos_informe)  # Para debug: muestra el JSON generado
 
                 # Llamada a la función que genera el informe en Word.
-                #informe_docx = generar_informe_en_word(df_filtrado, df_info_cuv)
-                #st.download_button(
-                #    label="Descargar Informe",
-                #    data=informe_docx,
-                #    file_name=f"informe_{st.session_state['input_cuv_str']}.docx",
-                #    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                #)
+                informe_docx = generar_informe_en_word(df_filtrado, df_info_cuv)
+                st.download_button(
+                    label="Descargar Informe",
+                    data=informe_docx,
+                    file_name=f"informe_{st.session_state['input_cuv_str']}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
         # Fin del st.form("informe_form")
 
-        # --- Calculadora de PMV y PPD (Modo Mixto) ---
-        st.markdown("---")
-        st.title("Calculadora de PMV y PPD - Modo Mixto")
-        st.write("Ajusta o verifica los valores precargados para ver los resultados recalculados automáticamente.")
+        # Título de la aplicación
+        st.title("Calculadora de PMV y PPD")
+        st.write("Ajusta los parámetros para ver los resultados recalculados automáticamente.")
 
-        # 1. Seleccionar el área cuyos datos se usarán para la calculadora
-        if "areas_data" in st.session_state and st.session_state["areas_data"]:
-            area_options = [
-                f"Área {i+1} - {area.get('Area o sector', 'Sin dato')}"
-                for i, area in enumerate(st.session_state["areas_data"])
-            ]
-            opcion_area = st.selectbox("Selecciona el área para el cálculo de PMV/PPD", options=area_options)
-            indice_area = int(opcion_area.split(" ")[1]) - 1  # Convertir a índice 0-based
-            datos_area = st.session_state["areas_data"][indice_area]
-
-            tdb_default = datos_area.get("Temperatura bulbo seco", 30.0)
-            tr_default  = datos_area.get("Temperatura globo", 30.0)
-            rh_default  = datos_area.get("Humedad relativa", 32.0)
-            v_default   = datos_area.get("Velocidad del aire", 0.8)
-        else:
-            st.warning("No hay datos de áreas en la sesión. Se usarán valores por defecto.")
-            tdb_default, tr_default, rh_default, v_default = 30.0, 30.0, 32.0, 0.8
-
-        st.markdown("### Ajusta o verifica los valores (se precargan con los datos del área seleccionada)")
-        tdb = st.number_input("Temperatura de bulbo seco (°C):", value=tdb_default)
-        tr  = st.number_input("Temperatura radiante (°C):", value=tr_default)
-        rh  = st.number_input("Humedad relativa (%):", value=rh_default)
-        v   = st.number_input("Velocidad del aire (m/s):", value=v_default)
-
+        # Entradas de usuario con valores por defecto (variables de valor fijo)
+        tdb = st.number_input("Temperatura de bulbo seco (°C):", value=30.0)
+        tr = st.number_input("Temperatura radiante (°C):", value=30.0)
+        rh = st.number_input("Humedad relativa (%):", value=32.0)
+        v = st.number_input("Velocidad del aire (m/s):", value=0.8)
         met = st.number_input("Tasa metabólica (met):", value=1.1)
         clo_dynamic = st.number_input("Aislamiento de la ropa (clo):", value=0.5)
 
+        # Aquí calculamos PMV y PPD de forma automática (SIN botón)
+
+        # 2. Calcular PMV y PPD
         results = pmv_ppd_iso(
             tdb=tdb,
             tr=tr,
@@ -342,12 +321,14 @@ def main():
             round_output=True
         )
 
+        # Mostrar los resultados en pantalla
         st.subheader("Resultados")
         st.write(f"**PMV:** {results.pmv}")
         st.write(f"**PPD:** {results.ppd}")
 
     else:
         st.info("Ingresa un CUV y haz clic en 'Buscar' para ver la información y generar el informe.")
+
 
 if __name__ == "__main__":
     main()
