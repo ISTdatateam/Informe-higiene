@@ -9,10 +9,27 @@ from pythermalcomfort.models import pmv_ppd_iso
 
 st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 
+def interpret_pmv(pmv_value):
+    if pmv_value >= 2.5:
+        return "Calurosa"
+    elif pmv_value >= 1.5:
+        return "Cálida"
+    elif pmv_value >= 0.5:
+        return "Ligeramente cálida"
+    elif pmv_value > -0.5:
+        return "Neutra - Confortable"
+    elif pmv_value > -1.5:
+        return "Ligeramente fresca"
+    elif pmv_value > -2.5:
+        return "Fresca"
+    else:
+        return "Fría"
+
+
 def main():
     st.header("Informes Confort Térmico")
     st.write("")
-    st.write("Versión 2.0.20250205")
+    st.write("Versión 2.1.20250205")
     st.write("")
 
     # --- Carga de CSVs ---
@@ -112,9 +129,9 @@ def main():
                 options=["Seleccione...", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
                          "V11", "V12", "V13", "V14", "V15"]
             )
-            patron_tbs = st.number_input("Patrón TBS", value=46.4, step=0.1)
-            patron_tbh = st.number_input("Patrón TBH", value=12.7, step=0.1)
-            patron_tg = st.number_input("Patrón TG", value=69.8, step=0.1)
+            patron_tbs = st.number_input("Patrón TBS (Sólo modificar en caso necesario)", value=46.4, step=0.1)
+            patron_tbh = st.number_input("Patrón TBH (Sólo modificar en caso necesario)", value=12.7, step=0.1)
+            patron_tg = st.number_input("Patrón TG (Sólo modificar en caso necesario)", value=69.8, step=0.1)
             verif_tbs_inicial = st.number_input("Verificación TBS inicial", step=0.1)
             verif_tbh_inicial = st.number_input("Verificación TBH inicial", step=0.1)
             verif_tg_inicial = st.number_input("Verificación TG inicial", step=0.1)
@@ -169,7 +186,10 @@ def main():
 
                     st.markdown(f"#### Condiciones del área {i}")
 
-                    techumbre = st.text_input(f"Techumbre - Área {i}", key=f"techumbre_{i}")
+                    st.write("La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.")
+                    techumbre = st.select_slider(f"Techumbre - Área {i}", key=f"techumbre_{i}", options=["Sí", "No"])
+                    st.write("Opción:", techumbre)
+
                     obs_techumbre = st.text_input(f"Observación techumbre - Área {i}", key=f"obs_techumbre_{i}")
                     st.write("")
                     paredes = st.text_input(f"Paredes - Área {i}", key=f"paredes_{i}")
@@ -300,8 +320,8 @@ def main():
 
         # --- Calculadora de PMV y PPD (Modo Mixto) ---
         st.markdown("---")
-        st.header("Calculadora de PMV y PPD - Modo Mixto")
-        st.write("Ajusta o verifica los valores precargados para ver los resultados recalculados automáticamente.")
+        st.header("Calculadora de confort")
+        st.write("Selecciona el área ver los resultados calculados automáticamente.")
 
         # 1. Seleccionar el área cuyos datos se usarán para la calculadora
         if "areas_data" in st.session_state and st.session_state["areas_data"]:
@@ -368,7 +388,9 @@ def main():
 
         st.subheader("Resultados")
         st.write(f"**PMV:** {results.pmv}")
-        st.write(f"**PPD:** {results.ppd}")
+        st.write(f"**PPD:** {results.ppd}%")
+        interpretation = interpret_pmv(results.pmv)
+        st.markdown(f"##### El valor de PMV {results.pmv} indica que la sensación térmica es: **{interpretation}**.")
 
     else:
         st.info("Ingresa un CUV y haz clic en 'Buscar' para ver la información y generar el informe.")
