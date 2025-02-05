@@ -8,7 +8,7 @@ from doc_utils import generar_informe_en_word  # Función para generar el Word
 st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 
 def main():
-    st.title("Informes Confort Térmico")
+    st.header("Informes Confort Térmico")
     st.write("")
     st.write("Versión 1.5.20250205")
     st.write("")
@@ -55,35 +55,38 @@ def main():
 
     if not df_filtrado.empty:
         st.markdown("---")
-        st.info("Completa o actualiza la información en el siguiente formulario para generar el informe.")
+
+        # 1: Datos generales
+        st.subheader("Datos generales")
+        if not df_info_cuv.empty:
+            cuv_info_row = df_info_cuv.iloc[0]
+            razon_social = st.text_input("Razón Social", value=str(cuv_info_row.get("RAZÓN SOCIAL", "")),
+                                         disabled=True)
+            rut = st.text_input("RUT", value=str(cuv_info_row.get("RUT", "")), disabled=True)
+            nombre_local = st.text_input("Nombre de Local", value=str(cuv_info_row.get("Nombre de Local", "")),
+                                         disabled=True)
+            direccion = st.text_input("Dirección", value=str(cuv_info_row.get("Dirección", "")), disabled=True)
+            comuna = st.text_input("Comuna", value=str(cuv_info_row.get("Comuna", "")), disabled=True)
+            region = st.text_input("Región", value=str(cuv_info_row.get("Región", "")), disabled=True)
+            cuv_val = st.text_input("CUV", value=str(cuv_info_row.get("CUV", "")), disabled=True)
+        else:
+            razon_social = st.text_input("Razón Social")
+            rut = st.text_input("RUT")
+            nombre_local = st.text_input("Nombre de Local")
+            direccion = st.text_input("Dirección")
+            comuna = st.text_input("Comuna")
+            region = st.text_input("Región")
+            cuv_val = st.text_input("CUV")
+
+        st.write("")
+
 
         # --- Formulario (st.form) ---
         with st.form("informe_form"):
 
-            # 1: Datos generales
-            st.subheader("Datos generales")
-            if not df_info_cuv.empty:
-                cuv_info_row = df_info_cuv.iloc[0]
-                razon_social = st.text_input("Razón Social", value=str(cuv_info_row.get("RAZÓN SOCIAL", "")),
-                                             disabled=True)
-                rut = st.text_input("RUT", value=str(cuv_info_row.get("RUT", "")), disabled=True)
-                nombre_local = st.text_input("Nombre de Local", value=str(cuv_info_row.get("Nombre de Local", "")),
-                                             disabled=True)
-                direccion = st.text_input("Dirección", value=str(cuv_info_row.get("Dirección", "")), disabled=True)
-                cuv_val = st.text_input("CUV", value=str(cuv_info_row.get("CUV", "")), disabled=True)
-                comuna = st.text_input("Comuna", value=str(cuv_info_row.get("Comuna", "")), disabled=True)
-                region = st.text_input("Región", value=str(cuv_info_row.get("Región", "")), disabled=True)
-            else:
-                razon_social = st.text_input("Razón Social")
-                rut = st.text_input("RUT")
-                nombre_local = st.text_input("Nombre de Local")
-                direccion = st.text_input("Dirección")
-                cuv_val = st.text_input("CUV")
-                comuna = st.text_input("Comuna")
-                region = st.text_input("Región")
-
             # 2: Inicio
-            st.subheader("Datos iniciales")
+            st.subheader("Datos de la visita")
+
             fecha_visita = st.date_input("Fecha de visita", value=date.today())
             hora_medicion = st.time_input("Hora de medición", value=time(hour=9, minute=0))
             temp_max = st.number_input("Temperatura máxima del día (°C)", min_value=-50.0, max_value=60.0,
