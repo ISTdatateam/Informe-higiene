@@ -65,11 +65,9 @@ def main():
         st.subheader("Datos generales")
         if not df_info_cuv.empty:
             cuv_info_row = df_info_cuv.iloc[0]
-            razon_social = st.text_input("Razón Social", value=str(cuv_info_row.get("RAZÓN SOCIAL", "")),
-                                         disabled=True)
+            razon_social = st.text_input("Razón Social", value=str(cuv_info_row.get("RAZÓN SOCIAL", "")), disabled=True)
             rut = st.text_input("RUT", value=str(cuv_info_row.get("RUT", "")), disabled=True)
-            nombre_local = st.text_input("Nombre de Local", value=str(cuv_info_row.get("Nombre de Local", "")),
-                                         disabled=True)
+            nombre_local = st.text_input("Nombre de Local", value=str(cuv_info_row.get("Nombre de Local", "")), disabled=True)
             direccion = st.text_input("Dirección", value=str(cuv_info_row.get("Dirección", "")), disabled=True)
             comuna = st.text_input("Comuna", value=str(cuv_info_row.get("Comuna", "")), disabled=True)
             region = st.text_input("Región", value=str(cuv_info_row.get("Región", "")), disabled=True)
@@ -133,7 +131,7 @@ def main():
                     st.markdown(f"#### Identificación del Área {i}")
                     # Widgets de identificación del área
                     area_sector = st.selectbox(f"Área {i}",
-                                               options=["Seleccione...", "Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"],
+                                               options=["Seleccione...", "Linea de cajas", "Sala de venta", "Bodega", "Recepción"],
                                                key=f"area_{i}")
                     espec_sector = st.selectbox(f"Sector específico dentro de área {i}",
                                                 options=["Seleccione...", "Centro", "Izquierda", "Derecha"],
@@ -141,7 +139,7 @@ def main():
 
                     puesto_trabajo = st.selectbox(
                         f"Puesto de trabajo área {i}",
-                        options=["Seleccione...", "Cajera", "Reponedor", "Bodeguero", "Recepcionista", "Otra"],
+                        options=["Seleccione...", "Cajera", "Reponedor", "Bodeguero", "Recepcionista"],
                         index=0,
                         key=f"puesto_{i}"
                     )
@@ -283,53 +281,79 @@ def main():
                 }
 
                 st.success("¡Formulario enviado correctamente!")
-                #st.json(datos_informe)  # Para debug: muestra el JSON generado
+                # Para debug: se puede visualizar el JSON resultante
+                # st.json(datos_informe)
 
                 # Guardar la información de las áreas en session_state para la calculadora
                 st.session_state["areas_data"] = areas_data
 
                 # Llamada a la función que genera el informe en Word.
-                #informe_docx = generar_informe_en_word(df_filtrado, df_info_cuv)
-                #st.download_button(
-                #    label="Descargar Informe",
-                #    data=informe_docx,
-                #    file_name=f"informe_{st.session_state['input_cuv_str']}.docx",
-                #    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                #)
+                # informe_docx = generar_informe_en_word(df_filtrado, df_info_cuv)
+                # st.download_button(
+                #     label="Descargar Informe",
+                #     data=informe_docx,
+                #     file_name=f"informe_{st.session_state['input_cuv_str']}.docx",
+                #     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                # )
+
         # Fin del st.form("informe_form")
 
         # --- Calculadora de PMV y PPD (Modo Mixto) ---
         st.markdown("---")
-        st.title("Calculadora de PMV y PPD - Modo Mixto")
+        st.header("Calculadora de PMV y PPD - Modo Mixto")
         st.write("Ajusta o verifica los valores precargados para ver los resultados recalculados automáticamente.")
 
         # 1. Seleccionar el área cuyos datos se usarán para la calculadora
         if "areas_data" in st.session_state and st.session_state["areas_data"]:
             area_options = [
-                f"Área {i+1} - {area.get('Area o sector', 'Sin dato')}"
+                f"Área {i + 1} - {area.get('Area o sector', 'Sin dato')}"
                 for i, area in enumerate(st.session_state["areas_data"])
             ]
             opcion_area = st.selectbox("Selecciona el área para el cálculo de PMV/PPD", options=area_options)
             indice_area = int(opcion_area.split(" ")[1]) - 1  # Convertir a índice 0-based
             datos_area = st.session_state["areas_data"][indice_area]
 
-            tdb_default = datos_area.get("Temperatura bulbo seco", 30.0)
-            tr_default  = datos_area.get("Temperatura globo", 30.0)
-            rh_default  = datos_area.get("Humedad relativa", 32.0)
-            v_default   = datos_area.get("Velocidad del aire", 0.8)
+            # Valores para temperatura, humedad y velocidad obtenidos del área
+            tdb_default = datos_area.get("Temperatura bulbo seco", 0.0)
+            tr_default = datos_area.get("Temperatura globo", 0.0)
+            rh_default = datos_area.get("Humedad relativa", 0.0)
+            v_default = datos_area.get("Velocidad del aire", 0.8)
+
+            # Obtener los valores de "Puesto de trabajo" y "Vestimenta" almacenados en el área
+            puesto_default = datos_area.get("Puesto de trabajo", "Cajera")
+            vestimenta_default = datos_area.get("Vestimenta", "Vestimenta habitual")
         else:
             st.warning("No hay datos de áreas en la sesión. Se usarán valores por defecto.")
             tdb_default, tr_default, rh_default, v_default = 30.0, 30.0, 32.0, 0.8
+            puesto_default, vestimenta_default = "Cajera", "Vestimenta habitual"
 
-        st.markdown("### Ajusta o verifica los valores (se precargan con los datos del área seleccionada)")
+        st.markdown("### Ajusta o verifica los valores del área seleccionada")
+
+        # --- Mostrar parámetros fijos para met y clo según el área seleccionada ---
+        met_mapping = {
+            "Cajera": 1.1,
+            "Reponedor": 1.2,
+            "Bodeguero": 1.89,
+            "Recepcionista": 1.89
+        }
+        clo_mapping = {
+            "Vestimenta habitual": 0.5,
+            "Vestimenta de invierno": 1.0
+        }
+        met = met_mapping.get(puesto_default, 1.2)
+        clo_dynamic = clo_mapping.get(vestimenta_default, 0.5)
+        st.write("Puesto de trabajo:", puesto_default, " -- ", met, " met")
+        #st.write("Tasa metabólica (met):", met)
+        st.write("Vestimenta:", vestimenta_default, " -- clo ", clo_dynamic)
+        #st.write("Aislamiento de la ropa (clo):", clo_dynamic)
+
+
         tdb = st.number_input("Temperatura de bulbo seco (°C):", value=tdb_default)
-        tr  = st.number_input("Temperatura radiante (°C):", value=tr_default)
-        rh  = st.number_input("Humedad relativa (%):", value=rh_default)
-        v   = st.number_input("Velocidad del aire (m/s):", value=v_default)
+        tr = st.number_input("Temperatura radiante (°C):", value=tr_default)
+        rh = st.number_input("Humedad relativa (%):", value=rh_default)
+        v = st.number_input("Velocidad del aire (m/s):", value=v_default)
 
-        met = st.number_input("Tasa metabólica (met):", value=1.1)
-        clo_dynamic = st.number_input("Aislamiento de la ropa (clo):", value=0.5)
-
+        # 2. Calcular PMV y PPD con los valores actuales
         results = pmv_ppd_iso(
             tdb=tdb,
             tr=tr,
