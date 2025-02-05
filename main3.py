@@ -139,11 +139,16 @@ def main():
                     vel_aire = st.number_input(f"Velocidad del aire (m/s) - Área {i}", min_value=0.0,
                                                max_value=20.0, value=0.0, step=0.1, key=f"vel_{i}")
 
-                    puesto_trabajo = st.multiselect(f"Puesto de trabajo - Área {i}",
-                                               options=["Cajera", "Reponedor", "Bodeguero", "Recepcionista", "Otra"],
-                                               default=[],
-                                               max_selections=1,
+                    puesto_trabajo = st.radio(f"Puesto de trabajo - Área {i}",
+                                               options=["Seleccione...","Cajera", "Reponedor", "Bodeguero", "Recepcionista", "Otra"],
+                                               index=0,
                                                key=f"puesto_{i}")
+
+                   if puesto_trabajo == "Seleccione...":
+                        st.error("El campo 'Puesto de trabajo' es obligatorio.")
+                    else:
+                        st.write("Valor seleccionado:", puesto_trabajo)
+
 
                     posicion_trabajador = st.multiselect(f"Medición a trabajadores - Área {i}",
                                                    options=["De pie - 1.10m", "Sentado - 0.600"],
