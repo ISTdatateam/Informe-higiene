@@ -144,7 +144,7 @@ def main():
                                                index=0,
                                                key=f"puesto_{i}")
 
-                   if puesto_trabajo == "Seleccione...":
+                    if puesto_trabajo == "Seleccione...":
                         st.error("El campo 'Puesto de trabajo' es obligatorio.")
                     else:
                         st.write("Valor seleccionado:", puesto_trabajo)
