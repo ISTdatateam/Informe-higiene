@@ -112,7 +112,7 @@ def main():
             motivo_evaluacion = st.selectbox("Motivo de evaluación",
                                              options=["Seleccione...", "Programa anual", "Solicitud empresa", "Fiscalización"],
                                              index=0)
-            nombre_personal = st.text_input("Nombre del personal SMU")
+            nombre_personal = st.text_input("Nombre del personal SMU - modificar en caso necesario")
             cargo = st.text_input("Cargo", value="Administador/a")
             consultor_ist = st.text_input("Consultor IST")
 
