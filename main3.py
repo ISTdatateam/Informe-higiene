@@ -7,7 +7,9 @@ from doc_utils import generar_informe_en_word  # Función para generar el Word
 
 from pythermalcomfort.models import pmv_ppd_iso
 
+
 st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
+
 
 def interpret_pmv(pmv_value):
     if pmv_value >= 2.5:
@@ -189,37 +191,29 @@ def main():
                     techumbre = st.pills(f"**La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.**", key=f"techumbre_{i}", options=["Sí", "No"])
                     obs_techumbre = st.text_input(f"Observación techumbre - obligatorio en caso de disconformidad", key=f"obs_techumbre_{i}")
                     st.write("")
-                    #paredes = st.select_slider(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}", options=["Sí", "No"])
-
-                    paredes = st.toggle(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}")
-                    if paredes:
-                        st.write("Cumple condición")
-                    else:
-                        st.write("Completa la observación")
-
+                    paredes = st.pills(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}", options=["Sí", "No"])
                     obs_paredes = st.text_input(f"Observación paredes - obligatorio en caso de disconformidad",
                                                 key=f"obs_paredes_{i}")
-
                     st.write("")
-                    ventanales = st.select_slider(f"**Los ventanales del área en los cuales incide directamente el sol, cuentan con algún tipo de material aislante, tales como laminas de protección solar, cortinas, gigantografías que proporcionen un apantallamiento.**", key=f"ventanales_{i}" , options=["Sí", "No"])
+                    ventanales = st.pills(f"**Los ventanales del área en los cuales incide directamente el sol, cuentan con algún tipo de material aislante, tales como laminas de protección solar, cortinas, gigantografías que proporcionen un apantallamiento.**", key=f"ventanales_{i}" , options=["Sí", "No"])
                     obs_ventanales = st.text_input(f"Observación ventanales - obligatorio en caso de disconformidad", key=f"obs_ventanales_{i}")
                     st.write("")
-                    aire_acond = st.select_slider(f"**El área cuenta con sistema de aire acondicionado y/o enfriador de aire, que proporcione movimiento de aire frío, con el fin de mejorar el confort para los trabajadores. Indicar temperatura de funcionamiento (°C).**", key=f"aire_{i}", options=["Sí", "No"])
+                    aire_acond = st.pills(f"**El área cuenta con sistema de aire acondicionado y/o enfriador de aire, que proporcione movimiento de aire frío, con el fin de mejorar el confort para los trabajadores. Indicar temperatura de funcionamiento (°C).**", key=f"aire_{i}", options=["Sí", "No"])
                     obs_aire_acond = st.text_input(f"Observaciones aire acondicionado - obligatorio especificar cantidad y operatividad.", key=f"obs_aire_{i}")
                     st.write("")
-                    ventiladores = st.select_slider(f"**El área cuenta con ventiladores que proporcionan movimiento de aire, con el fin de mejorar el confort para los trabajadores.**", key=f"venti_{i}", options=["Sí", "No"])
+                    ventiladores = st.pills(f"**El área cuenta con ventiladores que proporcionan movimiento de aire, con el fin de mejorar el confort para los trabajadores.**", key=f"venti_{i}", options=["Sí", "No"])
                     obs_ventiladores = st.text_input(f"Observaciones ventiladores - obligatorio especificar cantidad y operatividad.", key=f"obs_venti_{i}")
                     st.write("")
-                    inyeccion_extrac = st.select_slider(f"**El área cuenta con inyección y/o extracción de aire.**", key=f"inye_{i}", options=["Sí", "No"])
+                    inyeccion_extrac = st.pills(f"**El área cuenta con inyección y/o extracción de aire.**", key=f"inye_{i}", options=["Sí", "No"])
                     obs_inyeccion = st.text_input(f"Observaciones inyección/extracción de aire - obligatorio especificar cantidad y operatividad.", key=f"obs_inye_{i}")
                     st.write("")
-                    ventanas = st.select_slider(f"**El área evaluada cuenta con ventanas que permiten la entrada de aire fresco y la salida de aire caliente, favoreciendo así la ventilación natural.", key=f"ventana_{i}", options=["Sí", "No"])
+                    ventanas = st.pills(f"**El área evaluada cuenta con ventanas que permiten la entrada de aire fresco y la salida de aire caliente, favoreciendo así la ventilación natural.**", key=f"ventana_{i}", options=["Sí", "No"])
                     obs_ventanas = st.text_input(f"Observaciones ventanas - obligatorio en caso de disconformidad", key=f"obs_ventana_{i}")
                     st.write("")
-                    puertas = st.select_slider(f"**El área evaluada cuenta con puertas que proporcionan una vía adicional para la ventilación natural, al permitir la circulación del aire de forma controlada.**", key=f"puertas_{i}", options=["Sí", "No"])
+                    puertas = st.pills(f"**El área evaluada cuenta con puertas que proporcionan una vía adicional para la ventilación natural, al permitir la circulación del aire de forma controlada.**", key=f"puertas_{i}", options=["Sí", "No"])
                     obs_puertas = st.text_input(f"Observaciones puertas - obligatorio en caso de disconformidad", key=f"obs_puertas_{i}")
                     st.write("")
-                    condiciones_disconfort = st.select_slider(f"**El area presenta otras condiciones que pueden considerarse como causantes de disconfort térmico, que no hayan sido indicadas en los puntos anteriores.**", key=f"cond_{i}", options=["Sí", "No"])
+                    condiciones_disconfort = st.pills(f"**El area presenta otras condiciones que pueden considerarse como causantes de disconfort térmico, que no hayan sido indicadas en los puntos anteriores.**", key=f"cond_{i}", options=["Sí", "No"])
                     obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - obligatorio en caso de presencia", key=f"obs_cond_{i}")
 
                     st.markdown(f"#### Evidencia fotográfica del área {i}")
