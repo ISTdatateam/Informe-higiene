@@ -10,7 +10,7 @@ st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 def main():
     st.title("Informes Confort Térmico")
     st.write("")
-    st.write("Versión 0.4.20250203")
+    st.write("Versión 1.4.20250205")
     st.write("")
 
     # --- Carga de CSVs ---
@@ -144,7 +144,7 @@ def main():
                     area_sector = st.selectbox(f"Área o sector (Área {i})", key=f"area_{i}",
                     options=["","Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"])
 
-                    espec_sector = st.text_input(f"Especificación sector (Área {i})", key=f"espec_{i}",
+                    espec_sector = st.selectbox(f"Especificación sector (Área {i})", key=f"espec_{i}",
                     options=["","Centro", "Izquierda", "Derecha"])
 
                     tbs = st.number_input(f"Temperatura bulbo seco (°C) - Área {i}", value=0.0, step=0.1, key=f"tbs_{i}")
