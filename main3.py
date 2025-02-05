@@ -5,6 +5,8 @@ from datetime import datetime, date, time
 from data_access import get_data  # Función que obtiene el CSV principal
 from doc_utils import generar_informe_en_word  # Función para generar el Word
 
+from pythermalcomfort.models import pmv_ppd_iso
+
 st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 
 def main():
@@ -91,23 +93,24 @@ def main():
             hora_medicion = st.time_input("Hora de medición", value=time(hour=9, minute=0))
             temp_max = st.number_input("Temperatura máxima del día (°C)", min_value=-50.0, max_value=60.0,
                                        value=25.0, step=0.1)
-            motivo_evaluacion = st.radio("Motivo de evaluación",
-                                         options=["Seleccione..","Programa anual", "Solicitud empresa", "Fiscalización"],
+            motivo_evaluacion = st.selectbox("Motivo de evaluación",
+                                         options=["Seleccione...","Programa anual", "Solicitud empresa", "Fiscalización"],
                                          index=0)
             nombre_personal = st.text_input("Nombre del personal SMU")
             cargo = st.text_input("Cargo", value="Administador/a")
             consultor_ist = st.text_input("Consultor IST")
 
             # 3: Calibración
-            st.subheader("Calibración y otros datos")
+            st.markdown("---")
+            st.subheader("Calibración")
             cod_equipo_t = st.selectbox(
                 "Equipo temperatura",
-                options=["Seleccione..", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
+                options=["Seleccione...", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
                          "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20"]
             )
             cod_equipo_v = st.selectbox(
                 "Equipo velocidad aire",
-                options=["Seleccione..", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
+                options=["Seleccione...", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
                          "V11", "V12", "V13", "V14", "V15"]
             )
             patron_tbs = st.number_input("Patrón TBS", value=46.4, step=0.1)
@@ -118,70 +121,86 @@ def main():
             verif_tg_inicial = st.number_input("Verificación TG inicial", step=0.1)
 
             # 4: Mediciones de Áreas (10 áreas fijas)
+            st.markdown("---")
             st.subheader("Mediciones de Áreas")
-            st.info("Registre la información para cada una de las 10 áreas evaluadas.")
+            st.info("Pincha en el nombre de area para agregar información")
             # Se crean 10 sub-tabs, uno por cada área
             area_tabs = st.tabs([f"Área {i}" for i in range(1, 11)])
             areas_data = []
             for i, area_tab in enumerate(area_tabs, start=1):
                 with area_tab:
-                    st.markdown(f"### Área {i}")
+                    st.markdown(f"#### Identificación del Área {i}")
                     # En layout de una única columna, se muestran los widgets secuencialmente
-                    area_sector = st.radio(f"Área o sector (Área {i})",
-                                           options=["", "Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"],
+                    area_sector = st.selectbox(f"Área {i}",
+                                           options=["Seleccione...", "Linea de cajas", "Sala de venta", "Bodega", "Recepción", "Otra"],
                                            key=f"area_{i}")
-                    espec_sector = st.radio(f"Especificación sector (Área {i})",
-                                            options=["", "Centro", "Izquierda", "Derecha"],
+                    espec_sector = st.selectbox(f"Sector especifico dentro de área {i}",
+                                            options=["Seleccione...", "Centro", "Izquierda", "Derecha"],
                                             key=f"espec_{i}")
-                    tbs = st.number_input(f"Temperatura bulbo seco (°C) - Área {i}", value=0.0, step=0.1, key=f"tbs_{i}")
-                    tg = st.number_input(f"Temperatura globo (°C) - Área {i}", value=0.0, step=0.1, key=f"tg_{i}")
-                    hr = st.number_input(f"Humedad relativa (%) - Área {i}", min_value=0.0, max_value=100.0,
-                                         value=50.0, step=0.1, key=f"hr_{i}")
-                    vel_aire = st.number_input(f"Velocidad del aire (m/s) - Área {i}", min_value=0.0,
-                                               max_value=20.0, value=0.0, step=0.1, key=f"vel_{i}")
 
-                    puesto_trabajo = st.radio(
-                        f"Puesto de trabajo - Área {i}",
+                    puesto_trabajo = st.selectbox(
+                        f"Puesto de trabajo área {i}",
                         options=["Seleccione...", "Cajera", "Reponedor", "Bodeguero", "Recepcionista", "Otra"],
                         index=0,
                         key=f"puesto_{i}"
                     )
 
-                    posicion_trabajador = st.multiselect(
-                        f"Medición a trabajadores - Área {i}",
+                    posicion_trabajador = st.selectbox(
+                        f"Medición a trabajadores área {i}",
                         options=["Seleccione...", "De pie - 1.10m", "Sentado - 0.600"],
                         index=0,
                         key=f"pos_{i}")
 
+                    vestimenta = st.selectbox(
+                        f"Vestimenta trabajadores área {i}",
+                        options=["Seleccione...", "Vestimenta habitual", "Vestimenta de invierno"],
+                        index=0,
+                        key=f"ves_{i}")
 
+                    st.markdown(f"#### Mediciones del área {i}")
+
+                    tbs = st.number_input(f"Temperatura bulbo seco (°C) - Área {i}", value=0.0, step=0.1, key=f"tbs_{i}")
+                    tg = st.number_input(f"Temperatura globo (°C) - Área {i}", value=0.0, step=0.1, key=f"tg_{i}")
+                    hr = st.number_input(f"Humedad relativa (%) - Área {i}", min_value=0.0, max_value=100.0,
+                                         value=0.0, step=0.1, key=f"hr_{i}")
+                    vel_aire = st.number_input(f"Velocidad del aire (m/s) - Área {i}", min_value=0.0,
+                                               max_value=20.0, value=0.0, step=0.1, key=f"vel_{i}")
+
+                    st.markdown(f"#### Condiciones del área {i}")
 
 
                     techumbre = st.text_input(f"Techumbre - Área {i}", key=f"techumbre_{i}")
                     obs_techumbre = st.text_input(f"Observación techumbre - Área {i}", key=f"obs_techumbre_{i}")
+                    st.write("")
                     paredes = st.text_input(f"Paredes - Área {i}", key=f"paredes_{i}")
                     obs_paredes = st.text_input(f"Observación paredes - Área {i}", key=f"obs_paredes_{i}")
+                    st.write("")
                     ventanales = st.text_input(f"Ventanales - Área {i}", key=f"ventanales_{i}")
                     obs_ventanales = st.text_input(f"Observación ventanales - Área {i}", key=f"obs_ventanales_{i}")
-
-                    st.markdown("##### Otros aspectos")
+                    st.write("")
                     aire_acond = st.text_input(f"Aire acondicionado - Área {i}", key=f"aire_{i}")
                     obs_aire_acond = st.text_input(f"Observaciones aire acondicionado - Área {i}", key=f"obs_aire_{i}")
+                    st.write("")
                     ventiladores = st.text_input(f"Ventiladores - Área {i}", key=f"venti_{i}")
                     obs_ventiladores = st.text_input(f"Observaciones ventiladores - Área {i}", key=f"obs_venti_{i}")
+                    st.write("")
                     inyeccion_extrac = st.text_input(f"Inyección y/o extracción de aire - Área {i}", key=f"inye_{i}")
                     obs_inyeccion = st.text_input(f"Observaciones inyección/extracción de aire - Área {i}", key=f"obs_inye_{i}")
+                    st.write("")
                     ventanas = st.text_input(f"Ventanas (ventilación natural) - Área {i}", key=f"ventana_{i}")
                     obs_ventanas = st.text_input(f"Observaciones ventanas - Área {i}", key=f"obs_ventana_{i}")
+                    st.write("")
                     puertas = st.text_input(f"Puertas (ventilación natural) - Área {i}", key=f"puertas_{i}")
                     obs_puertas = st.text_input(f"Observaciones puertas - Área {i}", key=f"obs_puertas_{i}")
+                    st.write("")
                     condiciones_disconfort = st.text_input(f"Otras condiciones de disconfort térmico - Área {i}", key=f"cond_{i}")
                     obs_condiciones = st.text_input(f"Observaciones sobre disconfort térmico - Área {i}", key=f"obs_cond_{i}")
 
-                    st.markdown("##### Evidencia fotográfica")
+                    st.markdown(f"#### Evidencia fotográfica del área  {i}")
                     # Se usa un file uploader para adjuntar una foto (que en móviles puede abrir la cámara)
                     foto = st.file_uploader(f"Adjunta una foto para el Área {i}", type=["png", "jpg", "jpeg"], key=f"foto_{i}")
                     if foto is not None:
-                        st.image(foto, caption=f"Foto cargada - Área {i}", use_column_width=True)
+                        st.image(foto, caption=f"Foto cargada área {i}", use_column_width=True)
 
                     areas_data.append({
                         "Area o sector": area_sector,
@@ -192,6 +211,7 @@ def main():
                         "Velocidad del aire": vel_aire,
                         "Puesto de trabajo": puesto_trabajo,
                         "Trabajador de pie o sentado": posicion_trabajador,
+                        "Vestimenta": vestimenta,
                         "Techumbre": techumbre,
                         "Observación techumbre": obs_techumbre,
                         "Paredes": paredes,
@@ -214,6 +234,7 @@ def main():
                     })
 
             # 5: Fin
+            st.markdown("---")
             st.subheader("Cierre")
             verif_tbs_final = st.text_input("Verificación TBS final")
             verif_tbh_final = st.text_input("Verificación TBH final")
@@ -221,7 +242,8 @@ def main():
             comentarios_finales = st.text_area("Comentarios finales de evaluación")
 
             # Botón de envío del formulario
-            submitted = st.form_submit_button("Generar Informe")
+            st.markdown("---")
+            submitted = st.form_submit_button("Guardar información")
 
             if submitted:
                 # Consolidar los datos en una estructura para enviar a la función generadora del Word
@@ -271,8 +293,42 @@ def main():
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
         # Fin del st.form("informe_form")
+
+        # Título de la aplicación
+        st.title("Calculadora de PMV y PPD")
+        st.write("Ajusta los parámetros para ver los resultados recalculados automáticamente.")
+
+        # Entradas de usuario con valores por defecto (variables de valor fijo)
+        tdb = st.number_input("Temperatura de bulbo seco (°C):", value=30.0)
+        tr = st.number_input("Temperatura radiante (°C):", value=30.0)
+        rh = st.number_input("Humedad relativa (%):", value=32.0)
+        v = st.number_input("Velocidad del aire (m/s):", value=0.8)
+        met = st.number_input("Tasa metabólica (met):", value=1.1)
+        clo_dynamic = st.number_input("Aislamiento de la ropa (clo):", value=0.5)
+
+        # Aquí calculamos PMV y PPD de forma automática (SIN botón)
+
+        # 2. Calcular PMV y PPD
+        results = pmv_ppd_iso(
+            tdb=tdb,
+            tr=tr,
+            vr=v,
+            rh=rh,
+            met=met,
+            clo=clo_dynamic,
+            model="7730-2005",
+            limit_inputs=False,
+            round_output=True
+        )
+
+        # Mostrar los resultados en pantalla
+        st.subheader("Resultados")
+        st.write(f"**PMV:** {results.pmv}")
+        st.write(f"**PPD:** {results.ppd}")
+
     else:
         st.info("Ingresa un CUV y haz clic en 'Buscar' para ver la información y generar el informe.")
+
 
 if __name__ == "__main__":
     main()
