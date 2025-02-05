@@ -41,7 +41,7 @@ def main():
         st.session_state["input_cuv_str"] = ""
 
     # --- Búsqueda por CUV ---
-    input_cuv = st.text_input("Ingresa el CUV:")
+    input_cuv = st.text_input("Ingresa el CUV: ej. 183885 ")
 
     if st.button("Buscar"):
         st.session_state["input_cuv_str"] = input_cuv.strip()
