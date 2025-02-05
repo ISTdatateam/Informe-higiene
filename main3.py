@@ -112,9 +112,9 @@ def main():
             motivo_evaluacion = st.selectbox("Motivo de evaluación",
                                              options=["Seleccione...", "Programa anual", "Solicitud empresa", "Fiscalización"],
                                              index=0)
-            nombre_personal = st.text_input("Nombre del personal SMU - modificar en caso necesario")
-            cargo = st.text_input("Cargo", value="Administador/a")
-            consultor_ist = st.text_input("Consultor IST")
+            nombre_personal = st.text_input("Nombre del personal SMU")
+            cargo = st.text_input("Cargo - modificar en caso necesario", value="Administador/a")
+            consultor_ist = st.text_input("Consultor IST - Esto se va a completar solo mas adelante....")
 
             # 3: Calibración
             st.markdown("---")
@@ -186,7 +186,7 @@ def main():
 
                     st.markdown(f"#### Condiciones del área {i}")
 
-                    techumbre = st.select_slider(f"**La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.**", key=f"techumbre_{i}", options=["Sí", "No"])
+                    techumbre = st.pills(f"**La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.**", key=f"techumbre_{i}", options=["Sí", "No"])
                     obs_techumbre = st.text_input(f"Observación techumbre - obligatorio en caso de disconformidad", key=f"obs_techumbre_{i}")
                     st.write("")
                     paredes = st.select_slider(f"**En las paredes del área evaluada,donde  incida directamente el sol, cuentan con material aislante térmicos tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, o construcción de hormigón entre otros (especificar)**", key=f"paredes_{i}", options=["Sí", "No"])
