@@ -143,6 +143,8 @@ def main():
 
             # 4: Mediciones de Áreas (10 áreas fijas)
             st.markdown("---")
+            st.markdown("---")
+            st.markdown("---")
             st.subheader("Mediciones de Áreas")
             st.info("Selecciona un área para agregar información")
             # Se crean 10 sub-tabs, uno por cada área
