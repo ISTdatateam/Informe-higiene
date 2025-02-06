@@ -80,17 +80,17 @@ def main():
         # Muestra un resumen de datos generales y mediciones
         df_datos_generales = df_filtrado[df_filtrado["Que seccion quieres completar"] == "Datos generales"]
         if not df_datos_generales.empty:
-            st.write("**Datos Generales hallados en CSV principal**")
-            st.dataframe(df_datos_generales)
+            #st.write("**Datos Generales hallados en CSV principal**")
+            #st.dataframe(df_datos_generales)
         else:
-            st.write("No hay 'Datos Generales' en el CSV principal para este CUV.")
+            #st.write("No hay 'Datos Generales' en el CSV principal para este CUV.")
 
         df_mediciones = df_filtrado[df_filtrado["Que seccion quieres completar"] == "Medición de un area"]
         if not df_mediciones.empty:
-            st.write("**Mediciones halladas**")
-            st.dataframe(df_mediciones)
+            #st.write("**Mediciones halladas**")
+            #st.dataframe(df_mediciones)
         else:
-            st.write("No hay 'Medición de un area' en el CSV principal para este CUV.")
+            #st.write("No hay 'Medición de un area' en el CSV principal para este CUV.")
 
         # Botón para generar informe en Word
         if st.button("Generar Informe en Word"):
