@@ -189,7 +189,8 @@ def main():
                     vel_aire = st.number_input(f"Velocidad del aire (m/s) - Área {i}", min_value=0.0,
                                                max_value=20.0, value=0.0, step=0.1, key=f"vel_{i}")
 
-                    st.markdown(f"#### Aqui vamos a mover el resultado de calculadora con el cometario.. {i}")
+                    st.markdown(f"#### Aquí sale el resultado {i}")
+                    st.markdown(f"#### Ej. El valor de PMV 0.03 indica que la sensación térmica del area {i} es: Neutra - Confortable.")
                     st.write("")
 
                     st.markdown(f"#### Condiciones del área {i}")
