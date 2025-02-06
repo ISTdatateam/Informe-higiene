@@ -189,6 +189,9 @@ def main():
                     vel_aire = st.number_input(f"Velocidad del aire (m/s) - Área {i}", min_value=0.0,
                                                max_value=20.0, value=0.0, step=0.1, key=f"vel_{i}")
 
+                    st.markdown(f"#### Aqui vamos a mover el resultado de calculadora con el cometario.. {i}")
+                    st.write("")
+
                     st.markdown(f"#### Condiciones del área {i}")
 
                     techumbre = st.pills(f"**La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.**", key=f"techumbre_{i}", options=["Sí", "No"])
