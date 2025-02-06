@@ -39,7 +39,7 @@ def main():
         st.session_state["input_cuv_str"] = ""
 
     # Campo para ingresar el CUV
-    input_cuv = st.text_input("Ingresa el CUV:")
+    input_cuv = st.text_input("Ingresa el CUV: ej. 183885")
 
     # Botón "Buscar"
     if st.button("Buscar"):
