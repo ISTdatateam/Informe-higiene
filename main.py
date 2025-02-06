@@ -5,7 +5,7 @@ from data_access import get_data  # Tu función que obtiene el CSV principal
 from doc_utils import generar_informe_en_word  # Ajusta para usar la versión modificada
 
 def main():
-    st.title("Informes confort térmico")
+    st.header("Informes confort térmico")
     st.write("")
     st.write("Version 0.4.20250203")
     st.write("")
