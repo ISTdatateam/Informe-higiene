@@ -109,8 +109,8 @@ def main():
 
             fecha_visita = st.date_input("Fecha de visita", value=date.today())
             hora_medicion = st.time_input("Hora de medición", value=time(hour=9, minute=0))
-            temp_max = st.number_input("Temperatura máxima del día (°C)", min_value=-50.0, max_value=60.0,
-                                       value=25.0, step=0.1)
+            temp_max = st.number_input("Temperatura máxima del día (°C) -- Agregar link", min_value=-50.0, max_value=60.0,
+                                       value=0.0, step=0.1)
             motivo_evaluacion = st.selectbox("Motivo de evaluación",
                                              options=["Seleccione...", "Programa anual", "Solicitud empresa", "Fiscalización"],
                                              index=0)
