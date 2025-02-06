@@ -196,7 +196,12 @@ def main():
                     st.markdown(f"#### PMV: 0,92")
                     st.markdown(f"#### CUMPLE")
                     st.write("")
-
+                    st.write("")
+                    st.write("")
+                    st.write("")
+                    st.write("En caso de CUMPLE lo siguiente no se completa")
+                    st.write("")
+                    st.write("")
                     st.markdown(f"#### Condiciones del área {i}")
 
                     techumbre = st.pills(f"**La techumbre del área evaluada, cuenta con materiales aislantes térmico tales como: Policarbonatos extendidos, lana mineral, gomas, espuma de poliuretano, entre otros.**", key=f"techumbre_{i}", options=["Sí", "No"])
