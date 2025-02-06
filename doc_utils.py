@@ -9,6 +9,10 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import nsdecls
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
+from docx.enum.section import WD_SECTION
+from docx.shared import Inches, Pt, Cm
+
 
 def get_or_add_lang(rPr):
     # Busca el elemento 'w:lang'
@@ -18,9 +22,6 @@ def get_or_add_lang(rPr):
         lang = OxmlElement('w:lang')
         rPr.append(lang)
     return lang
-
-
-
 
 
 def descargar_imagen_gdrive(url_foto: str) -> BytesIO or None:
@@ -45,6 +46,80 @@ def descargar_imagen_gdrive(url_foto: str) -> BytesIO or None:
     except Exception as e:
         return None
 
+
+def look_informe(doc):
+    """
+    Configura el documento en orientación horizontal (apaisado).
+    """
+    for section in doc.sections:
+        section.top_margin = Cm(1)
+        section.bottom_margin = Cm(1)
+        section.left_margin = Cm(2)
+        section.right_margin = Cm(1.5)
+
+    #Stylo Normal
+    style = doc.styles['Normal']
+    font = style.font
+    font.name = 'Calibri'
+    font.size = Pt(9)  # Tamaño de fuente opcional; ajusta según prefieras
+
+    #Stylo destacado
+    destacado = doc.styles.add_style('destacado', 1)  # 1 para párrafos
+    destacado_font = destacado.font
+    destacado_font.name = 'Calibri'
+    destacado_font.size = Pt(12)  # Tamaño de la fuente en puntos
+
+    #Idioma Español de Chile
+    rpr = style.element.get_or_add_rPr()
+    lang = get_or_add_lang(rpr)
+    lang.set(qn('w:val'), 'es-CL')
+    lang.set(qn('w:eastAsia'), 'es-CL')
+    lang.set(qn('w:bidi'), 'es-CL')
+
+
+def set_vertical_alignment(doc, section_index=0, alignment='top'):
+    """
+    Ajusta la alineación vertical de la sección especificada.
+
+    Parámetros:
+    -----------
+    doc : Document
+        Objeto Document de python-docx.
+    section_index : int
+        Índice de la sección que se desea modificar. Por defecto 0 (la primera sección).
+    alignment : str
+        Valor de alineación vertical.
+        Puede ser 'top' (arriba) o 'center' (centrado). Por defecto 'top'.
+
+    Notas:
+    ------
+    - En Word, la propiedad w:vAlign puede tener valores como 'top', 'center', 'both'.
+    - Por defecto, Word coloca el contenido al 'top' si no se especifica otra cosa.
+    """
+
+    # Obtenemos la sección
+    section = doc.sections[section_index]
+    # Obtenemos o creamos la propiedad sectPr
+    sectPr = section._sectPr
+
+    # Buscamos el elemento vAlign
+    vAlign = sectPr.find(qn('w:vAlign'))
+    if vAlign is None:
+        vAlign = OxmlElement('w:vAlign')
+        sectPr.append(vAlign)
+
+    # Ajustamos el atributo w:val según el parámetro alignment
+    # Word reconoce 'top' o 'center' (y 'both' para justificado)
+    alignment = alignment.lower()
+    if alignment not in ['top', 'center', 'both']:
+        alignment = 'top'  # Valor por defecto o 'top' si no es válido
+
+    vAlign.set(qn('w:val'), alignment)
+
+
+
+
+
 def generar_informe_en_word(df_filtrado: pd.DataFrame,
                             df_info_cuv: pd.DataFrame) -> BytesIO:
     """
@@ -59,56 +134,117 @@ def generar_informe_en_word(df_filtrado: pd.DataFrame,
       5) Fotos embebidas
     """
 
+    '''
+
+    doc.add_paragraph()
+    doc.add_paragraph()
+    doc.add_paragraph()
+    # Agregar imagen del logo (ajusta la ruta de la imagen a tu ubicación)
+    doc.add_picture('IST.jpg', width=Inches(2))  # Ajusta el tamaño según sea necesario
+    last_paragraph = doc.paragraphs[-1]
+    last_paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER  # Alinear al centro
+
+    # Título principal
+    titulo = doc.add_heading('INFORME TÉCNICO', level=1)
+    titulo.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+    # Subtítulo
+    subtitulo = doc.add_heading('PRESCRIPCIÓN DE MEDIDAS PARA PROTOCOLO DE VIGILANCIA', level=2)
+    subtitulo.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    # Subtítulo
+    subtitulo = doc.add_heading('DE RIESGOS PSICOSOCIALES EN EL TRABAJO', level=2)
+    subtitulo.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    doc.add_paragraph()
+    doc.add_paragraph()
+
+
+    # Información general
+    p = doc.add_paragraph()
+    p.add_run('Razón Social: ').bold = True
+    p.add_run(f"{safe_get(datos, 'Nombre_Empresa')}\n")
+    p.add_run('RUT: ').bold = True
+    p.add_run(f"{safe_get(datos, 'RUT_Empresa')}\n")
+    p.add_run('Nombre del centro de trabajo: ').bold = True
+    p.add_run(f"{safe_get(datos, 'Nombre_Centro_de_Trabajo')}\n")
+    p.add_run('CUV: ').bold = True
+    p.add_run(f"{safe_get(datos, 'CUV')}\n")
+    p.add_run('CIIU: ').bold = True
+    p.add_run(f"{safe_get(datos, 'CIIU')}\n")
+    p.add_run('Fecha de activación del cuestionario: ').bold = True
+    p.add_run(f"{safe_get(datos, 'Fecha_Inicio')}\n")
+    p.add_run('Fecha de cierre del cuestionario: ').bold = True
+    p.add_run(f"{safe_get(datos, 'Fecha_Fin')}\n")
+    p.add_run('Universo de trabajadores de evaluación: ').bold = True
+    p.add_run(f"{safe_get(datos, 'Nº_Trabajadores_CT')}\n")
+    p.add_run('Nivel de riesgo: ').bold = True
+    p.add_run(f"{safe_get(datos, 'Nivel_de_riesgo')}\n")
+    p.paragraph_format.left_indent = Cm(1.5)
+
+    '''
+
+
+
+
+    # ============================
     # Crea el documento Word
+    # ============================
+
     doc = Document()
+    look_informe(doc)
 
-    # --- Ajustar la fuente a Calibri por defecto ---
-    style = doc.styles['Normal']
-    style.font.name = 'Calibri'
-    style.font.size = Pt(11)
+    # --- Sección 0 (portada) ya existe por defecto ---
+    doc.add_picture('IST.jpg', width=Inches(2))
+    doc.paragraphs[-1].alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-    # ============================
-    #   ESTABLECER IDIOMA: es-CL
-    # ============================
-    # Obtenemos la referencia a las propiedades de fuente del estilo Normal.
-    rPr = style.element.get_or_add_rPr()
-    lang = get_or_add_lang(rPr)
-    # Ajustamos el atributo w:val con 'es-CL' para indicar Español de Chile.
-    lang.set(qn('w:val'), 'es-CL')
-    lang.set(qn('w:eastAsia'), 'es-CL')
-    lang.set(qn('w:bidi'), 'es-CL')
+    titulo = doc.add_heading('INFORME TÉCNICO', level=2)
+    titulo.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
 
-    # Portada / Encabezado principal
-    doc.add_heading("EVALUACIÓN CONFORT TÉRMICO", 0)
-    doc.add_paragraph(
-        f"Fecha de generación del informe: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
-    )
+    subtitulo = doc.add_heading('EVALUACIÓN DE CONFORT TÉRMICO', level=2)
+    subtitulo.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+    if not df_info_cuv.empty:
+        portada_info = df_info_cuv.iloc[0]
+        n_local = doc.add_heading(portada_info.get('Nombre de Local'), level=2)
+        n_local.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+        n_local = doc.add_heading(portada_info.get('RAZÓN SOCIAL'), level=2)
+        n_local.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+
+    set_vertical_alignment(doc, section_index=0, alignment='center')
+
+    # --- Crear NUEVA SECCIÓN para el resto del contenido ---
+    doc.add_section(WD_SECTION.NEW_PAGE)
+    set_vertical_alignment(doc, section_index=1, alignment='top')
+
+    # Encabezado principal
+    doc.add_heading("EVALUACIÓN CONFORT TÉRMICO", 1)
+    #doc.add_paragraph(
+    #    f"Fecha de generación del informe: {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}"
+    #)
 
     # ============================
     #   1) DATOS INICIALES
     # ============================
     doc.add_heading("Identificación de empresa y centro de trabajo", level=1)
 
-    # -- A. Información empresa / B. Información centro --
-    # Creamos UNA tabla de 2 columnas para agrupar la info A, B y la parte C.
+    # Creamos una tabla de 2 columnas para agrupar la información (secciones A, B y C)
     table_inicial = doc.add_table(rows=0, cols=2)
-    table_inicial.style = 'Table Grid'  # o el estilo que prefieras
+    table_inicial.style = 'Table Grid'
 
     def add_row(table, label, value=""):
         """
         Agrega una fila a la tabla.
-        Si 'value' es vacío se asume que se trata de un título,
-        se fusionan ambas celdas y se aplica fondo morado y letras blancas.
+        Si 'value' es vacío se asume que se trata de un título; se fusionan ambas celdas
+        y se aplica fondo morado con letras blancas.
         """
         row_cells = table.add_row().cells
 
-        # Si value es vacío, tratamos la fila como título.
         if value == "":
-            # Fusionar ambas celdas.
+            # Fusionar ambas celdas para títulos
             merged_cell = row_cells[0].merge(row_cells[1])
             merged_cell.text = label
 
-            # Aplicar fondo morado (hex "800080") al contenido de la celda.
+            # Aplicar fondo morado (hex "800080")
             shading_elm = parse_xml(r'<w:shd {} w:fill="800080"/>'.format(nsdecls('w')))
             merged_cell._tc.get_or_add_tcPr().append(shading_elm)
 
@@ -119,22 +255,19 @@ def generar_informe_en_word(df_filtrado: pd.DataFrame,
                     run.font.bold = True
                     run.font.size = Pt(12)
         else:
-            # Para filas normales, se coloca la etiqueta en la primera columna y el valor en la segunda.
             row_cells[0].text = label
-            # Convertir a string en caso de que sea float o NaN
             value_str = "" if pd.isna(value) else str(value)
             row_cells[1].text = value_str
 
     # --- Sección A y B: Información empresa y centro de trabajo ---
     if not df_info_cuv.empty:
         row_cuv_info = df_info_cuv.iloc[0]
-
-        # A. Información empresa (título)
+        # A. Información empresa
         add_row(table_inicial, "A. Información empresa")
         add_row(table_inicial, "Razón Social", row_cuv_info.get('RAZÓN SOCIAL', ''))
         add_row(table_inicial, "RUT", row_cuv_info.get('RUT', ''))
 
-        # B. Información centro de trabajo (título)
+        # B. Información centro de trabajo
         add_row(table_inicial, "B. Información centro de trabajo")
         add_row(table_inicial, "CUV", row_cuv_info.get('CUV', ''))
         add_row(table_inicial, "Nombre de Local", row_cuv_info.get('Nombre de Local', ''))
@@ -148,71 +281,52 @@ def generar_informe_en_word(df_filtrado: pd.DataFrame,
     datos_generales = df_filtrado[df_filtrado["Que seccion quieres completar"] == "Datos generales"]
     mediciones = df_filtrado[df_filtrado["Que seccion quieres completar"] == "Medición de un area"]
 
-    # -- C. Antecedentes generales (en la misma tabla de 2 columnas) --
+    # -- Sección C: Antecedentes generales (en la misma tabla de 2 columnas) --
     if not datos_generales.empty:
-        # Tomamos la primera fila (o podrías iterar si hay varias)
         row_gen = datos_generales.iloc[0]
-
-        # Título de la sección C. Se fusionan las celdas y se aplica el formato.
         add_row(table_inicial, "C. Antecedentes generales de la evaluación")
-
-        # Nuevos / actualizados campos:
         add_row(table_inicial, "Fecha visita", row_gen.get('Fecha visita', ''))
         add_row(table_inicial, "Hora medición", row_gen.get('Hora medicion', ''))
         temp_max = row_gen.get('Temperatura máxima del día', '')
         add_row(table_inicial, "Temperatura máxima del día", f"{temp_max} °C" if temp_max else "")
-        add_row(table_inicial, "Nombre del personal SMU", row_gen.get('Nombre del personal SMU', ''))
-        add_row(table_inicial, "Cargo", row_gen.get('Cargo', ''))
-        add_row(table_inicial, "Profesional IST (Correo)", row_gen.get('Dirección de correo electrónico', ''))
+        add_row(table_inicial, "Nombre del personal empresa", row_gen.get('Nombre del personal SMU', ''))
+        add_row(table_inicial, "Cargo del personal empresa", row_gen.get('Cargo', ''))
+        add_row(table_inicial, "Destinatario empresa del informe", "--Pendiente generar en formulario--")
+        add_row(table_inicial, "Nombre consultor IST", "-- Pendiente vincular con usuario login--")
+        add_row(table_inicial, "Nombre revisor higiene IST", "-- Pendiente definir cuando se completa --")
 
-        # Agregamos columnas nuevas relacionadas con equipo y verificación
-        add_row(table_inicial, "Código equipo temperatura", row_gen.get('Código equipo temperatura', ''))
-        add_row(table_inicial, "Código equipo 2", row_gen.get('Codigo equipo 2', ''))
-        add_row(table_inicial, "Verificación TBS inicial", row_gen.get('Verificación TBS inicial', ''))
-        add_row(table_inicial, "Verificación TBH inicial", row_gen.get('Verificación TBH inicial', ''))
-        add_row(table_inicial, "Verificación TG inicial", row_gen.get('Verificación TG inicial', ''))
-        add_row(table_inicial, "Verificación TBS final", row_gen.get('Verificación TBS final', ''))
-        add_row(table_inicial, "Verificación TBH final", row_gen.get('Verificación TBH final', ''))
-        add_row(table_inicial, "Verificación TG final", row_gen.get('Verificación TG final', ''))
+        # ============================
+        #   2) RESUMEN DE MEDICIONES
+        # ============================
+        doc.add_heading("Resumen de Mediciones por Área.", level=1)
+        doc.add_paragraph()
+        doc.add_paragraph()
 
-        # Más columnas nuevas
-        add_row(table_inicial, "Patrón utilizado para calibrar", row_gen.get('Patrón utilizado para calibrar', ''))
-        add_row(table_inicial, "Patrón TBS", row_gen.get('Patrón TBS', ''))
-        add_row(table_inicial, "Patrón TBH", row_gen.get('Patrón TBH', ''))
-        add_row(table_inicial, "Patrón TG", row_gen.get('Patrón TG', ''))
-        add_row(table_inicial, "Tipo de vestimenta utilizada", row_gen.get('Tipo de vestimenta utilizada', ''))
-        add_row(table_inicial, "Motivo de evaluación", row_gen.get('Motivo de evaluación', ''))
-        add_row(table_inicial, "Comentarios finales de evaluación",
-                row_gen.get('Comentarios finales de evaluación', ''))
+        doc.add_heading("Metodología de evaluación y parámetros utilizados.", level=1)
+        doc.add_paragraph()
 
-        # Info adicional:
-        add_row(table_inicial,
-                "... A partir del registro de correo se buscan datos del profesional IST...",
-                "")
+        table_calib = doc.add_table(rows=0, cols=2)
+        table_calib.style = 'Table Grid'
+
+        # Título para la sección de detalles de equipos y calibración
+        add_row(table_calib, "D. Detalles de equipos y calibración")
+        add_row(table_calib, "Equipo temperatura", row_gen.get('Código equipo temperatura', ''))
+        add_row(table_calib, "Equipo velocidad viento", row_gen.get('Codigo equipo 2', ''))
+
+        # Se añaden más detalles relacionados
+        add_row(table_calib, "Tipo de vestimenta utilizada", row_gen.get('Tipo de vestimenta utilizada', ''))
+        add_row(table_calib, "Motivo de evaluación", row_gen.get('Motivo de evaluación', ''))
+        add_row(table_calib, "Comentarios finales de evaluación", row_gen.get('Comentarios finales de evaluación', ''))
+
     else:
-        add_row(table_inicial, "C. Antecedentes generales de la evaluación",
-                "No se han encontrado filas de 'Datos Generales' para este CUV.")
+        add_row(table_inicial, "", "No se han encontrado información para este CUV.")
 
-    doc.add_paragraph("")  # espacio extra
+    doc.add_paragraph("")  # Espacio extra
 
     # ============================
-    #   2) RESUMEN DE MEDICIONES
+    #   Tabla resumen de mediciones
     # ============================
-
-    doc.add_heading("Resumen de Mediciones por Área.", level=1)
-    doc.add_paragraph()
-    doc.add_paragraph()
-
-    doc.add_heading("Metodología de evaluación y parámetros utilizados.", level=1)
-    doc.add_paragraph()
-    doc.add_paragraph()
-
-    doc.add_heading("Resultado de mediciones y evaluaciones por área", level=1)
-    doc.add_paragraph()
-    doc.add_paragraph()
-
     if not mediciones.empty:
-        # Ajustar con los nombres exactos de tu CSV
         cols_resumen = [
             "Area o sector",
             "Especificación sector",
@@ -222,12 +336,10 @@ def generar_informe_en_word(df_filtrado: pd.DataFrame,
             "Velocidad del aire"
         ]
 
-        # Creamos la tabla con 1 fila extra para la cabecera
         tabla_resumen = doc.add_table(rows=1, cols=len(cols_resumen))
         tabla_resumen.style = 'Table Grid'
         hdr_cells = tabla_resumen.rows[0].cells
 
-        # Cabeceras
         hdr_cells[0].text = "Área"
         hdr_cells[1].text = "Especificación sector"
         hdr_cells[2].text = "TBS (°C)"
@@ -235,7 +347,6 @@ def generar_informe_en_word(df_filtrado: pd.DataFrame,
         hdr_cells[4].text = "HR (%)"
         hdr_cells[5].text = "Vel. aire (m/s)"
 
-        # Rellenamos las filas
         for _, row_med in mediciones.iterrows():
             row_cells = tabla_resumen.add_row().cells
             row_cells[0].text = str(row_med.get("Area o sector", ""))
@@ -244,78 +355,123 @@ def generar_informe_en_word(df_filtrado: pd.DataFrame,
             row_cells[3].text = str(row_med.get("Temperatura globo", ""))
             row_cells[4].text = str(row_med.get("Humedad relativa", ""))
             row_cells[5].text = str(row_med.get("Velocidad del aire", ""))
-
         doc.add_paragraph("")  # Espacio extra
     else:
         doc.add_paragraph("No se han encontrado filas de 'Medición de un area' para este CUV.")
 
-    # ============================
-    #   3) DESARROLLO POR ÁREA
-    # ============================
-    doc.add_page_break()
-    doc.add_heading("Anexo de condiciones observadas en áreas de medición", level=1)
-    if not mediciones.empty:
-        for idx, row_med in mediciones.iterrows():
-            doc.add_heading(f"Área: {row_med.get('Area o sector', '')} - {row_med.get('Especificación sector', '')}",
-                            level=2)
+        # ============================
+        #   3) DESARROLLO POR ÁREA
+        # ============================
+        doc.add_page_break()
+        doc.add_heading("Anexo de condiciones observadas en áreas de medición", level=1)
+        if not mediciones.empty:
+            for idx, row_med in mediciones.iterrows():
+                doc.add_heading(f"Área: {row_med.get('Area o sector', '')} - {row_med.get('Especificación sector', '')}",
+                                level=2)
 
-            # Tabla de 2 columnas con la info adicional
-            tabla_area = doc.add_table(rows=0, cols=2)
-            tabla_area.style = 'Table Grid'
+                tabla_area = doc.add_table(rows=0, cols=2)
+                tabla_area.style = 'Table Grid'
 
-            def add_area_row(label, value):
-                r = tabla_area.add_row().cells
-                # Convertir todo a string, evitando error con floats o NaN
-                value_str = "" if pd.isna(value) else str(value)
-                r[0].text = label
-                r[1].text = value_str
+                def add_area_row(label, value):
+                    r = tabla_area.add_row().cells
+                    value_str = "" if pd.isna(value) else str(value)
+                    r[0].text = label
+                    r[1].text = value_str
 
-            # Info de techumbre, paredes, ventanales, etc.
-            add_area_row("Puesto de trabajo", row_med.get("Puesto de trabajo", ""))
-            add_area_row("Trabajador de pie o sentado", row_med.get("Trabajador de pie o sentado", ""))
-            add_area_row("Techumbre", row_med.get("Techumbre", ""))
-            add_area_row("Observación techumbre", row_med.get("Observacion techumbre - Indique tipo de material", ""))
-            add_area_row("Paredes", row_med.get("Paredes", ""))
-            add_area_row("Observación paredes", row_med.get("Observacion paredes", ""))
-            add_area_row("Ventanales", row_med.get("Ventanales", ""))
-            add_area_row("Observación ventanales", row_med.get("Observacion ventanales", ""))
-            add_area_row("Aire acondicionado", row_med.get("Aire acondicionado", ""))
-            add_area_row("Observaciones aire acondicionado", row_med.get("Observaciones aire acondicionado", ""))
-            add_area_row("Ventiladores", row_med.get("Ventiladores", ""))
-            add_area_row("Observaciones ventiladores", row_med.get("Observaciones ventiladores", ""))
-            add_area_row("Inyección y/o extracción de aire", row_med.get("Inyección y/o extracción de aire", ""))
-            add_area_row("Observaciones inyección y/o extracción de aire",
-                         row_med.get("Observaciones inyeccion y/o extracción de aire", ""))
-            add_area_row("Ventanas (Ventilación natural)", row_med.get("Ventanas (Ventilación natural)", ""))
-            add_area_row("Observaciones ventanas (ventilación natural)",
-                         row_med.get("Observaciones ventanas (ventilación natural)", ""))
-            add_area_row("Puertas (ventilación natural)", row_med.get("Puertas (ventilación natural)", ""))
-            add_area_row("Observaciones puertas (ventilación natural)",
-                         row_med.get("Observaciones puertas (ventilación natural)", ""))
-            add_area_row("Otras condiciones de disconfort térmico",
-                         row_med.get("Otras condiciones de disconfort termico", ""))
-            add_area_row("Observaciones sobre otras condiciones de disconfort térmico",
-                         row_med.get("Observaciones sobre otras condiciones de disconfort térmico", ""))
+                add_area_row("Puesto de trabajo", row_med.get("Puesto de trabajo", ""))
+                add_area_row("Trabajador de pie o sentado", row_med.get("Trabajador de pie o sentado", ""))
+                add_area_row("Techumbre", row_med.get("Techumbre", ""))
+                add_area_row("Observación techumbre", row_med.get("Observacion techumbre - Indique tipo de material", ""))
+                add_area_row("Paredes", row_med.get("Paredes", ""))
+                add_area_row("Observación paredes", row_med.get("Observacion paredes", ""))
+                add_area_row("Ventanales", row_med.get("Ventanales", ""))
+                add_area_row("Observación ventanales", row_med.get("Observacion ventanales", ""))
+                add_area_row("Aire acondicionado", row_med.get("Aire acondicionado", ""))
+                add_area_row("Observaciones aire acondicionado", row_med.get("Observaciones aire acondicionado", ""))
+                add_area_row("Ventiladores", row_med.get("Ventiladores", ""))
+                add_area_row("Observaciones ventiladores", row_med.get("Observaciones ventiladores", ""))
+                add_area_row("Inyección y/o extracción de aire", row_med.get("Inyección y/o extracción de aire", ""))
+                add_area_row("Observaciones inyección y/o extracción de aire",
+                             row_med.get("Observaciones inyeccion y/o extracción de aire", ""))
+                add_area_row("Ventanas (Ventilación natural)", row_med.get("Ventanas (Ventilación natural)", ""))
+                add_area_row("Observaciones ventanas (ventilación natural)",
+                             row_med.get("Observaciones ventanas (ventilación natural)", ""))
+                add_area_row("Puertas (ventilación natural)", row_med.get("Puertas (ventilación natural)", ""))
+                add_area_row("Observaciones puertas (ventilación natural)",
+                             row_med.get("Observaciones puertas (ventilación natural)", ""))
+                add_area_row("Otras condiciones de disconfort térmico",
+                             row_med.get("Otras condiciones de disconfort termico", ""))
+                add_area_row("Observaciones sobre otras condiciones de disconfort térmico",
+                             row_med.get("Observaciones sobre otras condiciones de disconfort térmico", ""))
 
-            # Fotografías
-            evidencia = row_med.get("Evidencia fotografica", "")
-            if pd.notnull(evidencia) and isinstance(evidencia, str) and evidencia.strip():
-                doc.add_paragraph("Fotografías asociadas:")
-                for foto_url in [f.strip() for f in evidencia.split(",") if f.strip()]:
-                    imagen = descargar_imagen_gdrive(foto_url)
-                    if imagen is not None:
-                        doc.add_picture(imagen, width=Inches(4))
-                    else:
-                        doc.add_paragraph(f"No se pudo descargar la imagen: {foto_url}")
+                # Fotografías asociadas
+                evidencia = row_med.get("Evidencia fotografica", "")
+                if pd.notnull(evidencia) and isinstance(evidencia, str) and evidencia.strip():
+                    doc.add_paragraph("Fotografías asociadas:")
+                    for foto_url in [f.strip() for f in evidencia.split(",") if f.strip()]:
+                        imagen = descargar_imagen_gdrive(foto_url)
+                        if imagen is not None:
+                            doc.add_picture(imagen, width=Inches(4))
+                        else:
+                            doc.add_paragraph(f"No se pudo descargar la imagen: {foto_url}")
+                doc.add_paragraph("")  # Espacio extra
+        else:
+            doc.add_paragraph("No se encontró información de mediciones para detallar.")
 
-            doc.add_paragraph("")  # Espacio extra
-    else:
-        doc.add_paragraph("No se encontró información de mediciones para detallar.")
+        # --- Pie de informe ---
+        doc.add_paragraph("Informe versión prueba")
 
-    # --- Pie de informe ---
-    doc.add_paragraph("Informe versión prueba")
+        # ============================
+        #   4) APARTADO DETALLES TÉCNICOS DE LA EVALUACIÓN
+        # ============================
+        doc.add_page_break()
+        doc.add_heading("Anexo de detalles técnicos de evaluación", level=1)
 
-    # Convertimos a BytesIO para descargar
+        if not datos_generales.empty:
+            row_gen = datos_generales.iloc[0]
+            # Se crea una tabla de 4 columnas para el nuevo formato:
+            table_tec = doc.add_table(rows=0, cols=4)
+            table_tec.style = 'Table Grid'
+            # Fila de cabecera
+            hdr_cells = table_tec.add_row().cells
+            hdr_cells[0].text = "Verificación"
+            hdr_cells[1].text = "Patrón equipo"
+            hdr_cells[2].text = "Inicio medición"
+            hdr_cells[3].text = "Final medición"
+            # Fila para Valor TBS
+            row = table_tec.add_row().cells
+            row[0].text = "Valor TBS"
+            row[1].text = str(row_gen.get('Patrón TBS', ''))
+            row[2].text = str(row_gen.get('Verificación TBS inicial', ''))
+            row[3].text = str(row_gen.get('Verificación TBS final', ''))
+            # Fila para Valor TBH
+            row = table_tec.add_row().cells
+            row[0].text = "Valor TBH"
+            row[1].text = str(row_gen.get('Patrón TBH', ''))
+            row[2].text = str(row_gen.get('Verificación TBH inicial', ''))
+            row[3].text = str(row_gen.get('Verificación TBH final', ''))
+            # Fila para Valor TG
+            row = table_tec.add_row().cells
+            row[0].text = "Valor TG"
+            row[1].text = str(row_gen.get('Patrón TG', ''))
+            row[2].text = str(row_gen.get('Verificación TG inicial', ''))
+            row[3].text = str(row_gen.get('Verificación TG final', ''))
+        else:
+            # En caso de no encontrar datos generales, se crea una tabla informativa
+            table_tec = doc.add_table(rows=0, cols=4)
+            table_tec.style = 'Table Grid'
+            hdr_cells = table_tec.add_row().cells
+            hdr_cells[0].text = "Verificación"
+            hdr_cells[1].text = "Patrón equipo"
+            hdr_cells[2].text = "Inicio medición"
+            hdr_cells[3].text = "Final medición"
+            row = table_tec.add_row().cells
+            row[0].text = ""
+            row[1].text = ""
+            row[2].text = "No se han encontrado información para este CUV."
+            row[3].text = ""
+
+    # Convertir el documento a BytesIO para descargar
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
