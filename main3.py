@@ -87,13 +87,13 @@ def main():
         st.subheader("Datos generales")
         if not df_info_cuv.empty:
             cuv_info_row = df_info_cuv.iloc[0]
-            razon_social = st.text_input("Razón Social", value=str(cuv_info_row.get("RAZÓN SOCIAL", "")), disabled=True)
-            rut = st.text_input("RUT", value=str(cuv_info_row.get("RUT", "")), disabled=True)
-            nombre_local = st.text_input("Nombre de Local", value=str(cuv_info_row.get("Nombre de Local", "")), disabled=True)
-            direccion = st.text_input("Dirección", value=str(cuv_info_row.get("Dirección", "")), disabled=True)
-            comuna = st.text_input("Comuna", value=str(cuv_info_row.get("Comuna", "")), disabled=True)
-            region = st.text_input("Región", value=str(cuv_info_row.get("Región", "")), disabled=True)
-            cuv_val = st.text_input("CUV", value=str(cuv_info_row.get("CUV", "")), disabled=True)
+            razon_social = st.text_input("Razón Social", value=str(cuv_info_row.get("RAZÓN SOCIAL", "")), disabled=False)
+            rut = st.text_input("RUT", value=str(cuv_info_row.get("RUT", "")), disabled=False)
+            nombre_local = st.text_input("Nombre de Local", value=str(cuv_info_row.get("Nombre de Local", "")), disabled=False)
+            direccion = st.text_input("Dirección", value=str(cuv_info_row.get("Dirección", "")), disabled=False)
+            comuna = st.text_input("Comuna", value=str(cuv_info_row.get("Comuna", "")), disabled=False)
+            region = st.text_input("Región", value=str(cuv_info_row.get("Región", "")), disabled=False)
+            cuv_val = st.text_input("CUV", value=str(cuv_info_row.get("CUV", "")), disabled=False)
         else:
             razon_social = st.text_input("Razón Social")
             rut = st.text_input("RUT")
