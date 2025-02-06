@@ -132,10 +132,10 @@ def main():
                          "V11", "V12", "V13", "V14", "V15"]
             )
             patron_tbs = st.number_input("Patrón TBS (Sólo modificar en caso necesario)", value=46.4, step=0.1)
-            patron_tbh = st.number_input("Patrón TBH (Sólo modificar en caso necesario)", value=12.7, step=0.1)
-            patron_tg = st.number_input("Patrón TG (Sólo modificar en caso necesario)", value=69.8, step=0.1)
             verif_tbs_inicial = st.number_input("Verificación TBS inicial", step=0.1)
+            patron_tbh = st.number_input("Patrón TBH (Sólo modificar en caso necesario)", value=12.7, step=0.1)
             verif_tbh_inicial = st.number_input("Verificación TBH inicial", step=0.1)
+            patron_tg = st.number_input("Patrón TG (Sólo modificar en caso necesario)", value=69.8, step=0.1)
             verif_tg_inicial = st.number_input("Verificación TG inicial", step=0.1)
 
             # 4: Mediciones de Áreas (10 áreas fijas)
