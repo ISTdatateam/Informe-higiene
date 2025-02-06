@@ -10,6 +10,9 @@ def main():
     st.write("Version 0.4.20250203")
     st.write("")
 
+    st.write("Mensaje de login")
+    st.write("Bienvenido Rodrigo... (usuario)")
+
     # CSV 1: Datos generales / mediciones
     csv_url_main = (
         "https://docs.google.com/spreadsheets/d/e/"
