@@ -334,6 +334,10 @@ def main():
 
         # Fin del st.form("informe_form")
 
+        st.markdown("---")
+        st.header("Informe")
+        st.markdown("---")
+
         # --- Calculadora de PMV y PPD (Modo Mixto) ---
         st.markdown("---")
         st.header("Calculadora de confort")
