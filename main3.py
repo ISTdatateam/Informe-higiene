@@ -197,6 +197,7 @@ def main():
                     st.markdown(f"#### CUMPLE")
                     st.write("")
                     st.write("")
+                    st.write("Area 2")
                     st.write("")
                     st.write("")
                     st.write("En caso de CUMPLE lo siguiente no se completa")
