@@ -31,7 +31,7 @@ def interpret_pmv(pmv_value):
 def main():
     st.header("Informes Confort Térmico")
     st.write("")
-    st.write("Versión 2.2.20250205")
+    st.write("Versión 2.3.20250205")
     st.write("")
 
     # --- Carga de CSVs ---
