@@ -35,7 +35,7 @@ def main():
     st.write("")
 
     st.write("Mensaje de login")
-    st.write("Bienvenido Rodrigo")
+    st.write("Bienvenido Rodrigo... (usuario)")
 
     # --- Carga de CSVs ---
     # CSV 1: Datos generales / mediciones (CSV principal)
