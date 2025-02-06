@@ -34,6 +34,9 @@ def main():
     st.write("Versión 2.3.20250205")
     st.write("")
 
+    st.write("Mensaje de login")
+    st.write("Bienvenido Rodrigo")
+
     # --- Carga de CSVs ---
     # CSV 1: Datos generales / mediciones (CSV principal)
     csv_url_main = (
