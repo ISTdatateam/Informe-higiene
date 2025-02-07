@@ -29,7 +29,7 @@ def interpret_pmv(pmv_value):
 
 def main():
     st.header("Informes Confort Térmico")
-    st.write("Versión 2.3.20250205")
+    st.write("Versión 3.0.20250205")
     st.write("Mensaje de login")
     st.write("Bienvenido Rodrigo... (usuario)")
 
