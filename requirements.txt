@@ -1,5 +1,16 @@
 streamlit
 pandas
+numpy
+matplotlib
 python-docx
+pyodbc
+python-dotenv
+streamlit-aggrid
+mysql-connector-python
+toml
+streamlit-cookies-controller
+python-dateutil
+bcrypt==4.2.1
+cachetools==5.5.0
 requests
 pythermalcomfort
