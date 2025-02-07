@@ -31,7 +31,7 @@ def interpret_pmv(pmv_value):
 def main():
     st.header("Informes Confort Térmico")
     st.write("")
-    st.write("Versión 2.3.20250205")
+    st.write("Versión 3.0.20250207")
     st.write("")
 
     st.write("Mensaje de login")
@@ -83,6 +83,7 @@ def main():
     if not df_filtrado.empty:
         st.markdown("---")
 
+
         # 1: Datos generales
         st.subheader("Datos generales")
         if not df_info_cuv.empty:
@@ -106,6 +107,13 @@ def main():
         st.write("")
 
         # --- Formulario (st.form) ---
+
+        st.markdown("---")
+        st.markdown("INICIO FORMULARIO 1")
+        st.markdown("---")
+
+
+
         with st.form("informe_form"):
             # 2: Inicio
             st.subheader("Datos de la visita")
@@ -141,6 +149,17 @@ def main():
             patron_tg = st.number_input("Patrón TG (Sólo modificar en caso necesario)", value=69.8, step=0.1)
             verif_tg_inicial = st.number_input("Verificación TG inicial", step=0.1)
 
+            st.markdown("NOTA PARA GPT")
+            st.markdown("FIN DE FORMULARIO 1")
+            st.markdown("---")
+
+
+            st.markdown("NOTA PARA GPT")
+            st.markdown("INICIO FORMULARIO 2")
+            st.markdown("Aquí se requiere generar un formulario diferente por cada area ")
+            st.markdown(" y buscar una forma en que se muestren colapsados y al hacer click desplegarlo ")
+            st.markdown("---")
+
             # 4: Mediciones de Áreas (10 áreas fijas)
             st.markdown("---")
             st.markdown("---")
@@ -154,9 +173,16 @@ def main():
                 with area_tab:
                     st.markdown(f"#### Identificación del Área {i}")
                     # Widgets de identificación del área
-                    area_sector = st.selectbox(f"Área {i}",
-                                               options=["Seleccione...", "Linea de cajas", "Sala de venta", "Bodega", "Recepción"],
-                                               key=f"area_{i}")
+                    options_area_sector = ["Seleccione...", "Linea de cajas", "Sala de venta", "Bodega", "Recepción"]
+                    default_area_sector = default_area.get("Area o sector", "Seleccione...")
+                    index_area_sector = options_area_sector.index(
+                        default_area_sector) if default_area_sector in options_area_sector else 0
+                    area_sector = st.selectbox(
+                        f"Área {i}",
+                        options=options_area_sector,
+                        index=index_area_sector,
+                        key=f"area_sector_{i}"
+                    )
                     espec_sector = st.selectbox(f"Sector específico dentro de área {i}",
                                                 options=["Seleccione...", "Centro", "Izquierda", "Derecha"],
                                                 key=f"espec_{i}")
@@ -269,8 +295,19 @@ def main():
                         "Evidencia fotográfica": foto,
                     })
             st.markdown("---")
+
+            st.markdown("NOTA PARA GPT")
+            st.markdown("FIN FORMULARIOS tipo 2 (uno para cara area)")
+            st.markdown("---------------")
+
+
             submitted = st.form_submit_button("Guardar información")
             # 5: Fin
+
+            st.markdown("NOTA PARA GPT")
+            st.markdown("INICIO FORMULARIOS tipo 3")
+            st.markdown("---------------")
+
             st.subheader("Cierre")
             verif_tbs_final = st.text_input("Verificación TBS final")
             verif_tbh_final = st.text_input("Verificación TBH final")
@@ -333,6 +370,11 @@ def main():
                 # )
 
         # Fin del st.form("informe_form")
+
+
+        st.markdown("NOTA PARA GPT")
+        st.markdown("FIN FORMULARIOS tipo 3")
+        st.markdown("---------------")
 
         st.markdown("---")
         st.header("Informe")
