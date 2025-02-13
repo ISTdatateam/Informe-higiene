@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, date, time
 
-from data_access import get_data  # Función que obtiene el CSV principal
+from data_access2 import get_data  # Función que obtiene el CSV principal
 from doc_utils import generar_informe_en_word  # Función para generar el Word
 
 from pythermalcomfort.models import pmv_ppd_iso
