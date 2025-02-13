@@ -11,6 +11,7 @@ import qrcode
 from PIL import ImageOps  # Asegúrate de tener Pillow instalado
 from io import BytesIO
 from docx.oxml.ns import qn
+from datetime import datetime
 
 # Configuración básica del logging
 # logging.basicConfig(level=logging.INFO)
@@ -459,8 +460,15 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         direccion_ct = row_centro.get("direccion_ct", "")
         comuna_ct = row_centro.get("comuna_ct", "")
         direccion_completa = f"{direccion_ct}, {comuna_ct}"
-        fecha_visita = row_visita.get("fecha_visita", "")
-        hora_visita = row_visita.get("hora_visita", "")
+        fecha_visita = str(row_visita.get("fecha_visita", ""))
+        if fecha_visita:
+            fecha_obj = datetime.strptime(fecha_visita, "%Y-%m-%d")  # Convertir a objeto datetime
+            fecha_visita = fecha_obj.strftime("%d-%m-%Y")
+
+        hora_visita = str(row_visita.get("hora_visita", ""))
+        if hora_visita:
+            hora_obj = datetime.strptime(hora_visita, "%H:%M:%S")
+            hora_visita = hora_obj.strftime("%H:%M")
         personal_visita = row_visita.get("nombre_personal_visita", "")
         cargo_visita = row_visita.get("cargo_personal_visita", "")
         consultor_ist = row_visita.get("consultor_ist", "")
@@ -556,7 +564,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     if not df_mediciones.empty:
         # Definir el orden y nombres de columnas a mostrar
         columnas_resumen = [
-            "Área", "Sector", "Temperatura bulbo seco(°C)", "Temperatura globo(°C)",
+            "Área", "Sector", "Temp. bulbo seco(°C)", "Temp. globo(°C)",
             "Humedad relativa (%)", "Velocidad del aire(m/s)", "PPD", "PMV",
             "Estándar de confortabilidad térmica PMV  [-1,+1]"
         ]
@@ -718,8 +726,15 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         merge_column_cells(tabla_resumen, 0)
         merge_column_cells(tabla_resumen, 8)
         format_row(tabla_resumen.rows[0])
-
-        doc.add_paragraph("")
+        set_column_width(tabla_resumen, 0, Cm(2.5))
+        set_column_width(tabla_resumen, 1, Cm(2))
+        set_column_width(tabla_resumen, 2, Cm(1.5))
+        set_column_width(tabla_resumen, 3, Cm(1.5))
+        set_column_width(tabla_resumen, 4, Cm(1.5))
+        set_column_width(tabla_resumen, 5, Cm(1.5))
+        set_column_width(tabla_resumen, 6, Cm(1.5))
+        set_column_width(tabla_resumen, 7, Cm(1.5))
+        set_column_width(tabla_resumen, 8, Cm(1.5))
     else:
         doc.add_paragraph("No se encontraron mediciones para detallar.")
 
@@ -759,7 +774,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
                 f"cumplen con el estándar de confort térmico, por lo que se recomienda mantener las condiciones actuales o similares."
             )
             doc.add_paragraph(
-                f"Respecto a {no_cumplen_text} que no cumplen con el estándar, se deben adoptar las medidas prescritas (detalladas en la tabla 2) para corregir las condiciones."
+                f"Respecto a {no_cumplen_text} que no cumplen con el estándar, se deben adoptar las medidas prescritas para corregir las condiciones."
             )
         elif cumplen_text and not no_cumplen_text:
             # Caso 1: Sólo existen áreas que cumplen.
@@ -771,7 +786,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             # Caso 3: Sólo existen áreas que no cumplen.
             doc.add_paragraph(
                 f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {no_cumplen_text} "
-                f"{'no cumple' if len(areas_no_cumplen) == 1 else 'no cumplen'} con el estándar de confort térmico, por lo que se deben adoptar las medidas prescritas (detalladas en la tabla 2) para corregir las condiciones."
+                f"{'no cumple' if len(areas_no_cumplen) == 1 else 'no cumplen'} con el estándar de confort térmico, por lo que se deben adoptar las medidas prescritas para corregir las condiciones."
             )
         else:
             # En caso de que no haya información suficiente
