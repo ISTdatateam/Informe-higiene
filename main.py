@@ -1,111 +1,110 @@
 import streamlit as st
 import pandas as pd
 
-from data_access import get_data  # Tu función que obtiene el CSV principal
-from doc_utils import generar_informe_en_word  # Ajusta para usar la versión modificada
+# Importa las funciones para conectarse a la base de datos
+# (estas funciones están definidas en data_access.py)
+from data_access import get_centro, get_visita, get_mediciones, get_equipos
+
+# Importa la función para generar el informe en Word (adaptada para trabajar con DB)
+from doc_utils import generar_informe_en_word
 
 def main():
-    st.header("Informes confort térmico")
-    st.write("")
-    st.write("Version 0.4.20250203")
-    st.write("")
-
-    st.write("Mensaje de login")
+    st.header("Informes Confort Térmico")
+    st.write("Versión 2.4.20250203")
     st.write("Bienvenido Rodrigo... (usuario)")
 
-    # CSV 1: Datos generales / mediciones
-    csv_url_main = (
-        "https://docs.google.com/spreadsheets/d/e/"
-        "2PACX-1vTPdZTyxM6BDLmnlqe246tfBm7H06vXBdQKruh2mPg-rhQSD8olCS30ej4BdtJ1R__3W6K-Va3hm5Ax/"
-        "pub?output=csv"
-    )
-    df_main = get_data(csv_url_main)  # DataFrame principal
-
-    # CSV 2: Información de CUV (RUT, Razón Social, etc.)
-    csv_url_cuv_info = (
-        "https://docs.google.com/spreadsheets/d/e/"
-        "2PACX-1vSn2sEH86jBQNbjQEhtehoFIL54cFtdH3HST5zM257XbzkFx5V3VNDCO_CyIYiIWECrl1xoohSnC-lC/"
-        "pub?output=csv"
-    )
-    df_cuv_info = pd.read_csv(csv_url_cuv_info)
-
-    # Mostramos columnas (opcional, para debug)
-    #st.write("Columnas en df_main:", df_main.columns.tolist())
-    #st.write("Columnas en df_cuv_info:", df_cuv_info.columns.tolist())
-
-    # Inicializamos en session_state las variables que usaremos
-    if "df_filtrado" not in st.session_state:
-        st.session_state["df_filtrado"] = pd.DataFrame()
-    if "df_info_cuv" not in st.session_state:
-        st.session_state["df_info_cuv"] = pd.DataFrame()
-    if "input_cuv_str" not in st.session_state:
-        st.session_state["input_cuv_str"] = ""
+    # Inicializamos en session_state las variables que usaremos para almacenar la info consultada
+    if "df_centro" not in st.session_state:
+        st.session_state["df_centro"] = None
+    if "df_visitas" not in st.session_state:
+        st.session_state["df_visitas"] = None
+    if "df_mediciones" not in st.session_state:
+        st.session_state["df_mediciones"] = None
+    if "df_equipos" not in st.session_state:
+        st.session_state["df_equipos"] = None
+    if "input_cuv" not in st.session_state:
+        st.session_state["input_cuv"] = ""
 
     # Campo para ingresar el CUV
-    input_cuv = st.text_input("Ingresa el CUV: ej. 183885")
+    input_cuv = st.text_input("Ingresa el CUV: ej. 114123")
 
-    # Botón "Buscar"
+    # Botón "Buscar" que realiza las consultas a la base de datos
     if st.button("Buscar"):
-        # Guardamos el CUV en session_state para uso posterior
-        st.session_state["input_cuv_str"] = input_cuv.strip()
+        # Guardamos el CUV ingresado en session_state
+        st.session_state["input_cuv"] = input_cuv.strip()
 
-        # Filtramos en el df_main y en df_cuv_info
-        df_main["CUV"] = df_main["CUV"].astype(str).str.strip()
-        df_cuv_info["CUV"] = df_cuv_info["CUV"].astype(str).str.strip()
-
-        # Filtrado principal
-        st.session_state["df_filtrado"] = df_main[df_main["CUV"] == st.session_state["input_cuv_str"]]
-
-        # Filtrado info CUV (RUT, Razón Social, etc.)
-        st.session_state["df_info_cuv"] = df_cuv_info[df_cuv_info["CUV"] == st.session_state["input_cuv_str"]]
-
-    # Mostramos resultados
-    df_filtrado = st.session_state["df_filtrado"]
-    df_info_cuv = st.session_state["df_info_cuv"]
-
-    if not df_filtrado.empty:
-        st.subheader("Resumen de Datos Generales")
-
-        # Si hay datos de info_cuv, mostramos en resumen
-        if not df_info_cuv.empty:
-            # Tomamos la primera fila
-            cuv_info_row = df_info_cuv.iloc[0]
-            st.write(f"**CUV**: {cuv_info_row.get('CUV', '')}")
-            st.write(f"**RUT**: {cuv_info_row.get('RUT', '')}")
-            st.write(f"**Razón Social**: {cuv_info_row.get('RAZÓN SOCIAL', '')}")
-            st.write(f"**Nombre de Local**: {cuv_info_row.get('Nombre de Local', '')}")
-            st.write(f"**Dirección**: {cuv_info_row.get('Dirección', '')}")
-            st.write(f"**Comuna**: {cuv_info_row.get('Comuna', '')}")
-            st.write(f"**Región**: {cuv_info_row.get('Región', '')}")
+        # Consulta de la información del centro de trabajo
+        df_centro = get_centro(st.session_state["input_cuv"])
+        # Consulta de las visitas para el CUV (se ordenan para obtener la visita más reciente)
+        df_visitas = get_visita(st.session_state["input_cuv"])
+        # Si existe al menos una visita, se selecciona la más reciente y se consultan las mediciones asociadas
+        if not df_visitas.empty:
+            visita_id = df_visitas.iloc[0].get("id_visita")
+            df_mediciones = get_mediciones(visita_id)
         else:
-            st.warning("No se encontró información de RUT/Razón Social/etc. para este CUV.")
+            df_mediciones = pd.DataFrame()
+        # Se obtiene la información completa de equipos de medición
+        df_equipos = get_equipos()
 
-        # Muestra un resumen de datos generales y mediciones
-        df_datos_generales = df_filtrado[df_filtrado["Que seccion quieres completar"] == "Datos generales"]
-        if not df_datos_generales.empty:
-            st.write("**Datos Generales hallados en CSV principal**")
-            #st.dataframe(df_datos_generales)
-        else:
-            st.write("No hay 'Datos Generales' en el CSV principal para este CUV.")
+        # Se actualizan los valores en session_state
+        st.session_state["df_centro"] = df_centro
+        st.session_state["df_visitas"] = df_visitas
+        st.session_state["df_mediciones"] = df_mediciones
+        st.session_state["df_equipos"] = df_equipos
 
-        df_mediciones = df_filtrado[df_filtrado["Que seccion quieres completar"] == "Medición de un area"]
-        if not df_mediciones.empty:
-            st.write("**Mediciones halladas**")
-            #st.dataframe(df_mediciones)
-        else:
-            st.write("No hay 'Medición de un area' en el CSV principal para este CUV.")
+    # Mostramos el resumen de la información consultada
+    df_centro = st.session_state["df_centro"]
+    df_visitas = st.session_state["df_visitas"]
+    df_mediciones = st.session_state["df_mediciones"]
 
-        # Botón para generar informe en Word
-        if st.button("Generar Informe en Word"):
-            informe_docx = generar_informe_en_word(df_filtrado, df_info_cuv)
+    if df_centro is not None and not df_centro.empty:
+        st.subheader("Resumen de Información del Centro de Trabajo")
+        centro = df_centro.iloc[0]
+        st.write(f"**CUV**: {centro.get('cuv', '')}")
+        st.write(f"**RUT**: {centro.get('rut', '')}")
+        st.write(f"**Razón Social**: {centro.get('razon_social', '')}")
+        st.write(f"**Nombre de Local**: {centro.get('nombre_ct', '')}")
+        st.write(f"**Dirección**: {centro.get('direccion_ct', '')}")
+        st.write(f"**Comuna**: {centro.get('comuna_ct', '')}")
+        st.write(f"**Región**: {centro.get('region_ct', '')}")
+    else:
+        st.info("No se encontró información del centro para este CUV.")
+
+    if df_visitas is not None and not df_visitas.empty:
+        st.subheader("Información de la Visita más Reciente")
+        visita = df_visitas.iloc[0]
+        st.write(f"**Fecha de Visita**: {visita.get('fecha_visita', '')}")
+        st.write(f"**Hora de Visita**: {visita.get('hora_visita', '')}")
+        st.write(f"**Motivo de Evaluación**: {visita.get('motivo_evaluacion', '')}")
+        st.write(f"**Personal de Visita**: {visita.get('nombre_personal_visita', '')} - {visita.get('cargo_personal_visita', '')}")
+    else:
+        st.info("No se encontró información de visitas para este CUV.")
+
+    if df_mediciones is not None and not df_mediciones.empty:
+        st.subheader("Mediciones Asociadas a la Visita")
+        st.dataframe(df_mediciones)
+    else:
+        st.info("No se encontraron mediciones para este CUV.")
+
+    # Botón para generar el informe en Word
+    if st.button("Generar Informe en Word"):
+        if (st.session_state["df_centro"] is not None and not st.session_state["df_centro"].empty) and \
+           (st.session_state["df_visitas"] is not None and not st.session_state["df_visitas"].empty):
+            # Se llama a la función generadora pasando los dataframes obtenidos
+            informe_docx = generar_informe_en_word(
+                st.session_state["df_centro"],
+                st.session_state["df_visitas"],
+                st.session_state["df_mediciones"],
+                st.session_state["df_equipos"]
+            )
             st.download_button(
                 label="Descargar Informe",
                 data=informe_docx,
-                file_name=f"informe_{st.session_state['input_cuv_str']}.docx",
+                file_name=f"informe_{st.session_state['input_cuv']}.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
-    else:
-        st.info("Ingresa un CUV y haz clic en 'Buscar' para ver la información y generar el informe.")
+        else:
+            st.error("No hay información suficiente para generar el informe. Verifica el CUV ingresado.")
 
 if __name__ == "__main__":
     main()

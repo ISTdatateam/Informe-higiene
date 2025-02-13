@@ -2,75 +2,26 @@
 import logging
 import re
 import requests
+from io import BytesIO
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor, Cm
 from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_PARAGRAPH_ALIGNMENT
 from pythermalcomfort.models import pmv_ppd_iso
 import qrcode
 from PIL import ImageOps  # Asegúrate de tener Pillow instalado
 from io import BytesIO
-from docx.oxml.ns import qn
+
 
 # Configuración básica del logging
-# logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
 logging.basicConfig(level=logging.DEBUG)
 
 
 # -----------------------------------------------
 # FUNCIONES AUXILIARES PARA EL DOCUMENTO WORD
 # -----------------------------------------------
-
-
-def format_columns(df, columns, mode="title"):
-    """
-    Formatea las columnas especificadas en un DataFrame eliminando espacios al inicio y al final,
-    y transformando el texto según el modo seleccionado.
-
-    Parámetros:
-        df (DataFrame): El DataFrame a modificar.
-        columns (list): Lista de nombres de columnas a formatear.
-        mode (str): Modo de transformación, puede ser:
-            - "title": Convierte el texto a Título (cada palabra con su primera letra en mayúscula).
-            - "capitalize": Solo la primera letra de la primera palabra en mayúscula.
-            - "upper": Todo el texto en mayúsculas.
-            (El valor por defecto es "title".)
-
-    Retorna:
-        DataFrame: El DataFrame con las columnas formateadas.
-    """
-    for col in columns:
-        if col in df.columns:
-            # Convertir a cadena y eliminar espacios al inicio y final
-            df[col] = df[col].astype(str).str.strip()
-            # Aplicar la transformación según el modo
-            if mode == "title":
-                df[col] = df[col].str.lower().str.title()
-            elif mode == "capitalize":
-                df[col] = df[col].str.lower().str.capitalize()
-            elif mode == "upper":
-                df[col] = df[col].str.upper()
-            else:
-                raise ValueError(f"Modo '{mode}' no reconocido. Use 'title', 'capitalize' o 'upper'.")
-    return df
-
-
-
-
-
-def set_column_width(table, col_index, width):
-    """
-    Establece el ancho de la columna 'col_index' de la tabla 'table' al valor 'width' (un objeto de docx.shared, por ejemplo Cm(4)).
-    """
-    # width._value retorna el ancho en unidades dxa (1 dxa = 1/20 de punto)
-    for cell in table.columns[col_index].cells:
-        tc = cell._tc
-        tcPr = tc.get_or_add_tcPr()
-        tcW = OxmlElement('w:tcW')
-        tcW.set(qn('w:w'), str(int(width.inches * 1440)))
-        tcW.set(qn('w:type'), 'dxa')
-        tcPr.append(tcW)
-
 
 def merge_column_cells(tabla, col_index, start_row=1):
     """
@@ -102,6 +53,7 @@ def merge_column_cells(tabla, col_index, start_row=1):
             primera_celda = primera_celda.merge(tabla.cell(j, col_index))
 
 
+
 def generate_qr_code(url, border=10, box_size=2):
     qr = qrcode.QRCode(
         version=1,
@@ -119,7 +71,6 @@ def generate_qr_code(url, border=10, box_size=2):
     bio.seek(0)
     return bio
 
-
 def join_with_and(items):
     """
     Une los elementos de la lista usando la conjunción "y" para el último elemento.
@@ -128,7 +79,6 @@ def join_with_and(items):
       - ['Oficina', 'Sala']     => "Oficina y Sala"
       - ['Oficina', 'Sala', 'Bodega'] => "Oficina, Sala y Bodega"
     """
-    items = list(items)  # Convertir a lista para evitar ambigüedades
     if not items:
         return ""
     elif len(items) == 1:
@@ -137,8 +87,6 @@ def join_with_and(items):
         return f"{items[0]} y {items[1]}"
     else:
         return ", ".join(items[:-1]) + " y " + items[-1]
-
-
 
 def get_or_add_lang(rPr):
     """
@@ -158,7 +106,6 @@ def interpret_pmv(pmv_value):
         return "CUMPLE"
     else:
         return "NO CUMPLE"
-
 
 def descargar_imagen_gdrive(url_foto: str) -> BytesIO or None:
     """
@@ -180,105 +127,6 @@ def descargar_imagen_gdrive(url_foto: str) -> BytesIO or None:
         return None
 
 
-# -----------------------------------------------------
-# NUEVAS FUNCIONES PARA CONFIGURAR ESTILOS DE MANERA MODULAR
-# -----------------------------------------------------
-def set_style_language(style, lang_code="es-CL"):
-    """
-    Asigna el código de idioma a un estilo dado.
-    Se configura para el texto normal, Asia Oriental y bidireccional.
-    """
-    rPr = style.element.get_or_add_rPr()
-    lang = get_or_add_lang(rPr)
-    lang.set(qn('w:val'), lang_code)
-    lang.set(qn('w:eastAsia'), lang_code)
-    lang.set(qn('w:bidi'), lang_code)
-
-
-def apply_style_properties(style, properties):
-    """
-    Aplica las propiedades definidas en el diccionario 'properties' al estilo 'style'.
-    Las propiedades pueden incluir: font_name, font_size, font_color, bold, italic,
-    space_before, space_after, alignment y lang_code.
-    """
-    font = style.font
-    font.name = properties.get("font_name", font.name)
-    font.size = properties.get("font_size", font.size)
-    font.color.rgb = properties.get("font_color", font.color.rgb)
-    font.bold = properties.get("bold", font.bold)
-    font.italic = properties.get("italic", font.italic)
-
-    para_format = style.paragraph_format
-    para_format.space_before = properties.get("space_before", para_format.space_before)
-    para_format.space_after = properties.get("space_after", para_format.space_after)
-    para_format.alignment = properties.get("alignment", para_format.alignment)
-
-    # Aplicar idioma
-    set_style_language(style, properties.get("lang_code", "es-CL"))
-
-
-# Diccionario de configuración de estilos
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-
-style_configurations = {
-    "Normal": {
-        "font_name": "Calibri",
-        "font_size": Pt(10),
-        "font_color": RGBColor(0x00, 0x00, 0x00),
-        "bold": False,
-        "italic": False,
-        "space_before": Pt(0),
-        "space_after": Pt(0),
-        "alignment": WD_ALIGN_PARAGRAPH.JUSTIFY,
-        "lang_code": "es-CL"
-    },
-    "Heading 1": {
-        "font_name": "Calibri",
-        "font_size": Pt(14),
-        "font_color": RGBColor(0, 0, 0),
-        "bold": True,
-        "italic": False,
-        "space_before": Pt(0),
-        "space_after": Pt(12),
-        "alignment": WD_ALIGN_PARAGRAPH.LEFT,
-        "lang_code": "es-CL"
-    },
-    "Heading 2": {
-        "font_name": "Calibri",
-        "font_size": Pt(12),
-        "font_color": RGBColor(79, 11, 123),
-        "bold": True,
-        "italic": False,
-        "space_before": Pt(12),
-        "space_after": Pt(12),
-        "alignment": WD_ALIGN_PARAGRAPH.LEFT,
-        "lang_code": "es-CL"
-    },
-    "Heading 3": {
-        "font_name": "Calibri",
-        "font_size": Pt(11),
-        "font_color": RGBColor(0x30, 0x30, 0x30),
-        "bold": True,
-        "italic": False,
-        "space_before": Pt(8),
-        "space_after": Pt(8),
-        "alignment": WD_ALIGN_PARAGRAPH.LEFT,
-        "lang_code": "es-CL"
-    },
-    "TablaTexto": {  # Estilo personalizado para el contenido de las tablas
-        "font_name": "Calibri",
-        "font_size": Pt(10),
-        "font_color": RGBColor(0, 0, 0),
-        "bold": False,
-        "italic": False,
-        "space_before": Pt(0),
-        "space_after": Pt(0),
-        "alignment": WD_ALIGN_PARAGRAPH.LEFT,
-        "lang_code": "es-CL"
-    }
-}
-
-
 def look_informe(doc: Document):
     """
     Configura el documento: establece orientación, márgenes, estilos y el idioma.
@@ -289,14 +137,74 @@ def look_informe(doc: Document):
         section.left_margin = Cm(2.5)
         section.right_margin = Cm(2)
 
-    # Aplicar configuración a los estilos definidos en nuestro diccionario
-    for style_name, properties in style_configurations.items():
-        try:
-            style = doc.styles[style_name]
-            apply_style_properties(style, properties)
-        except KeyError:
-            # Si el estilo no existe, se continúa
-            continue
+        # Configurar el estilo "Normal"
+    normal_style = doc.styles['Normal']
+    normal_style.font.name = 'Calibri'
+    normal_style.font.size = Pt(10)
+    normal_style.font.color.rgb = RGBColor(0x00, 0x00, 0x00)  # Negro
+    normal_style.font.bold = False
+    normal_style.font.italic = False
+    normal_style.paragraph_format.space_before = Pt(0)
+    normal_style.paragraph_format.space_after = Pt(0)
+    normal_style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+
+    # Define las propiedades para cada nivel de encabezado, incluyendo color, negrita e itálica
+    heading_styles = {
+        "Heading 1": {
+            "font_name": "Calibri",
+            "font_size": Pt(14),
+            "space_before": Pt(0),
+            "space_after": Pt(12),
+            "color": RGBColor(0, 0, 0),
+            "bold": True,
+            "italic": False
+        },
+        "Heading 2": {
+            "font_name": "Calibri",
+            "font_size": Pt(12),
+            "space_before": Pt(12),
+            "space_after": Pt(12),
+            "color": RGBColor(79, 11, 123),
+            "bold": True,
+            "italic": False
+        },
+        "Heading 3": {
+            "font_name": "Calibri",
+            "font_size": Pt(11),
+            "space_before": Pt(8),
+            "space_after": Pt(8),
+            "color": RGBColor(0x30, 0x30, 0x30),
+            "bold": True,
+            "italic": False
+        }
+    }
+
+    # Actualizar los estilos globales de encabezado según la configuración
+    for style_name, props in heading_styles.items():
+        style = doc.styles[style_name]
+        style.font.name = props["font_name"]
+        style.font.size = props["font_size"]
+        style.font.color.rgb = props["color"]
+        style.font.bold = props["bold"]
+        style.font.italic = props["italic"]
+        style.paragraph_format.space_before = props["space_before"]
+        style.paragraph_format.space_after = props["space_after"]
+
+    # Estilo destacado
+    try:
+        destacado = doc.styles.add_style('destacado', 1)  # 1 para párrafos
+    except Exception as e:
+        destacado = doc.styles['destacado']
+    destacado_font = destacado.font
+    destacado_font.name = 'Calibri'
+    destacado_font.size = Pt(12)
+
+    # Idioma Español de Chile
+    rpr = style.element.get_or_add_rPr()
+    lang = get_or_add_lang(rpr)
+    lang.set(qn('w:val'), 'es-CL')
+    lang.set(qn('w:eastAsia'), 'es-CL')
+    lang.set(qn('w:bidi'), 'es-CL')
 
 
 
@@ -314,7 +222,6 @@ def set_vertical_alignment(doc: Document, section_index=0, alignment='top'):
     if alignment not in ['top', 'center', 'both']:
         alignment = 'top'
     vAlign.set(qn('w:val'), alignment)
-
 
 # Función auxiliar para poner en negrita todas las celdas de una fila
 def set_row_bold(row):
@@ -336,8 +243,7 @@ def apply_style(cell, shading_color="4f0b7b"):
         for run in paragraph.runs:
             run.font.color.rgb = RGBColor(255, 255, 255)
             run.font.bold = True
-            run.font.size = Pt(10)
-
+            run.font.size = Pt(12)
 
 def format_row(row, shading_color="4f0b7b"):
     """
@@ -345,7 +251,6 @@ def format_row(row, shading_color="4f0b7b"):
     """
     for cell in row.cells:
         apply_style(cell, shading_color)
-
 
 def add_row(table, label, value="", first=False):
     """
@@ -373,7 +278,8 @@ def add_row(table, label, value="", first=False):
             format_row(row)
 
 
-# -----------------------------------------------
+
+#-----------------------------------------------
 # FUNCIÓN PARA GENERAR EL DOCUMENTO WORD
 # -----------------------------------------------
 def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -> BytesIO:
@@ -384,16 +290,11 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
       - df_mediciones: mediciones asociadas a la visita (tabla higiene_Mediciones)
       - df_equipos: información de equipos de medición (tabla higiene_Equipos_Medicion)
     """
-
-    format_columns(df_visitas, ['nombre_personal_visita', 'consultor_ist'], mode="title")
-    format_columns(df_visitas, 'cargo_personal_visita', mode="capitalize")
-    format_columns(df_mediciones, ['nombre_area', 'sector_especifico','puesto_trabajo'], mode="capitalize")
-
-
-
     doc = Document()
     look_informe(doc)
     set_vertical_alignment(doc, section_index=0, alignment='top')
+
+
 
     # Cabecera con logo
     section = doc.sections[0]
@@ -441,7 +342,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     if not df_visitas.empty:
         # Se agregan dos párrafos de resumen fijos (ejemplo)
         doc.add_paragraph(
-            "Efectuadas mediciones de confort térmico en el local 'Nombre de Local', es posible concluir que las áreas de 'Area o sector' cumplen con el estándar de confort térmico, por lo que se debe mantener las condiciones actuales o similares.")
+            "Efectuadas mediciones de confort térmico en el local 'Nombre de Local', es posible concluir que las áreas de 'Area o sector' cumplen con el estándar de confort térmico, por lo cual se debe mantener las condiciones actuales o similares.")
         doc.add_paragraph(
             "Respecto de las áreas que no cumplen con el estándar, se deben adoptar las medidas prescritas detalladas en la tabla 2 para su solución.")
 
@@ -468,13 +369,13 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             f"A solicitud de {razon_social}, se realiza una evaluación de confort térmico en el centro {nombre_ct}, ubicado en {direccion_completa}.")
         doc.add_paragraph(
             f"La visita se realizó el día {fecha_visita} a las {hora_visita} por el consultor de IST {consultor_ist} acompañado por {personal_visita} ({cargo_visita}).")
-        # --- Agregar áreas evaluadas ---
+        # --- GPT: Agregar áreas evaluadas ---
         if not df_mediciones.empty:
             areas = df_mediciones["nombre_area"].unique()
             if len(areas) == 1:
-                doc.add_paragraph(f"El área evaluada fue {join_with_and(areas)}.")
+                doc.add_paragraph(f"El área evaluada fue {areas[0]}.")
             else:
-                doc.add_paragraph(f"Las áreas evaluadas fueron {join_with_and(areas)}.")
+                doc.add_paragraph(f"Las áreas evaluadas fueron {', '.join(areas)}.")
         # --- FIN DE AGREGAR ---
     else:
         doc.add_paragraph("No se encontró información de visita para este CUV.")
@@ -485,12 +386,12 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     doc.add_paragraph()
     paragraph = doc.add_heading("Metodología de las mediciones y evaluaciones", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    # --- Agregar detalles de equipos utilizando datos de df_equipos ---
+    # --- GPT: Agregar detalles de equipos utilizando datos de df_equipos ---
     if not df_visitas.empty and not df_equipos.empty:
         row_visita = df_visitas.iloc[0]
         # Obtener equipo de temperatura
         equipo_temp_cod = row_visita.get('equipo_temp', '')
-        equipo_temp_detalles = df_equipos[df_equipos['id_equipo'] == equipo_temp_cod]
+        equipo_temp_detalles = df_equipos[df_equipos['simple_cod'] == equipo_temp_cod]
         if not equipo_temp_detalles.empty:
             eq_temp = equipo_temp_detalles.iloc[0]
             equipo_temp_text = f"{eq_temp.get('nombre_equipo', '')} {eq_temp.get('marca_equipo', '')} {eq_temp.get('modelo_equipo', '')}"
@@ -498,7 +399,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             equipo_temp_text = equipo_temp_cod
         # Obtener equipo de velocidad del aire
         equipo_vel_cod = row_visita.get('equipo_vel_air', '')
-        equipo_vel_detalles = df_equipos[df_equipos['id_equipo'] == equipo_vel_cod]
+        equipo_vel_detalles = df_equipos[df_equipos['simple_cod'] == equipo_vel_cod]
         if not equipo_vel_detalles.empty:
             eq_vel = equipo_vel_detalles.iloc[0]
             equipo_vel_text = f"{eq_vel.get('nombre_equipo', '')} {eq_vel.get('marca_equipo', '')} {eq_vel.get('modelo_equipo', '')}"
@@ -541,15 +442,22 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     else:
         doc.add_paragraph("No se encontraron datos de vestimenta y actividad metabólica.")
 
+
+
+    # --- FIN DE AGREGAR ---
+
     # -------------------------------
     # Resultados de mediciones y evaluación
     # -------------------------------
+
     doc.add_page_break()
 
     # Crear listas para las áreas que cumplen y no cumplen
     areas_cumplen = []
     areas_no_cumplen = []
 
+
+    doc.add_paragraph()
     paragraph = doc.add_heading("Resultados de mediciones y evaluación", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
@@ -558,13 +466,13 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         columnas_resumen = [
             "Área", "Sector", "Temperatura bulbo seco(°C)", "Temperatura globo(°C)",
             "Humedad relativa (%)", "Velocidad del aire(m/s)", "PPD", "PMV",
-            "Estándar de confortabilidad térmica PMV  [-1,+1]"
+            "Estándar de confortabilidad térmica PMV [-1,+1]"
         ]
         tabla_resumen = doc.add_table(rows=1, cols=len(columnas_resumen))
         tabla_resumen.style = 'Table Grid'
-        # Formatear la primera fila para que tenga el estilo deseado (negrita y letras blancas)
-
+        format_row(tabla_resumen.rows[0])
         hdr_cells = tabla_resumen.rows[0].cells
+
         for idx, col_name in enumerate(columnas_resumen):
             hdr_cells[idx].text = col_name
 
@@ -638,15 +546,15 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
 
                 # Agregar la línea de promedios
                 row_cells = tabla_resumen.add_row().cells
-                row_cells[0].text = str(area)  # Se muestra el área en la línea de promedios
-                row_cells[1].text = "Promedio"  # Sector
+                row_cells[0].text = str(area)   # Se muestra el área en la línea de promedios
+                row_cells[1].text = "Promedio"    # Sector
                 row_cells[2].text = f"{avg_t_bul:.2f}"
                 row_cells[3].text = f"{avg_t_globo:.2f}"
                 row_cells[4].text = f"{avg_hum:.1f}"
                 row_cells[5].text = f"{avg_vel:.2f}"
                 row_cells[6].text = f"{avg_ppd:.2f}"
                 row_cells[7].text = f"{avg_pmv:.2f}"
-                row_cells[8].text = f"{analisis}"  # Placeholder
+                row_cells[8].text = f"{analisis}"    # Placeholder
 
                 if analisis.upper() == "CUMPLE":
                     areas_cumplen.append(area)
@@ -663,10 +571,13 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
                 row_cells = tabla_resumen.add_row().cells
                 if len(group) > 1:
                     row_cells[0].text = ""  # Dejar en blanco en filas individuales si hay resumen
+                    # Si se muestra el área en esta fila, poner la fila en negrita.
                 else:
                     row_cells[0].text = str(row_med.get("nombre_area", ""))
+                #row_cells[1].text = str(row_med.get("sector_especifico", ""))
                 if len(group) == 1:
                     row_cells[1].text = ""  # Dejar en blanco en filas individuales si hay resumen
+                    # Si se muestra el área en esta fila, poner la fila en negrita.
                 else:
                     row_cells[1].text = " - " + str(row_med.get("sector_especifico", ""))
                 try:
@@ -702,12 +613,12 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
 
                 if len(group) > 1:
                     row_cells[8].text = ""  # Dejar en blanco en filas individuales si hay resumen
+                    # Si se muestra el área en esta fila, poner la fila en negrita.
                 else:
                     row_cells[8].text = str(row_med.get("resultado_medicion", ""))
 
                 if row_cells[0].text.strip():
-                    (set_row_bold
-                     (tabla_resumen.rows[-1]))
+                    set_row_bold(tabla_resumen.rows[-1])
 
                 if len(group) == 1:
                     if row_med.get("resultado_medicion").upper() == "CUMPLE":
@@ -717,13 +628,13 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
 
         merge_column_cells(tabla_resumen, 0)
         merge_column_cells(tabla_resumen, 8)
-        format_row(tabla_resumen.rows[0])
 
         doc.add_paragraph("")
     else:
         doc.add_paragraph("No se encontraron mediciones para detallar.")
 
-    # Encabezado principal del contenido: Conclusiones
+
+    # Encabezado principal del contenido: Resumen
     doc.add_paragraph()
     paragraph = doc.add_heading("Conclusiones", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -776,10 +687,9 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         else:
             # En caso de que no haya información suficiente
             doc.add_paragraph(
-                "No se encontró información suficiente en las mediciones para emitir una conclusión sobre el confort térmico."
-            )
+                "No se encontró información suficiente en las mediciones para emitir una conclusión sobre el confort térmico.")
 
-    # Encabezado principal del contenido: Vigencia del informe
+    # Encabezado principal del contenido: Resumen
     doc.add_paragraph()
     paragraph = doc.add_heading("Vigencia del informe", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
@@ -788,14 +698,14 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         doc.add_paragraph(
             "El presente informe tiene una vigencia de 3 años, en la medida que no cambien las condiciones.")
         doc.add_paragraph(
-            "Estos resultados de evaluación representan las condiciones existentes del ambiente y lugar de trabajo al momento de realizar las mediciones."
-        )
+            "Estos resultados de evaluación representan las condiciones existentes del ambiente y lugar de trabajo al momento de realizar las mediciones.")
 
     doc.add_paragraph()
 
     # -------------------------------
     # 4) ANEXOS
     # -------------------------------
+
     doc.add_page_break()
     doc.add_heading("Equipos de medición utilizado", level=2)
     # En lugar de mostrar el listado completo, se mostrará solo la información relacionada.
@@ -806,8 +716,8 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         equipo_vel_cod = row_visita.get('equipo_vel_air', '')
         codigos_en_uso = [equipo_temp_cod, equipo_vel_cod]
 
-        # Filtrar df_equipos para que solo incluya las filas donde 'id_equipo' está en codigos_en_uso
-        df_equipos_filtrado = df_equipos[df_equipos['id_equipo'].isin(codigos_en_uso)]
+        # Filtrar df_equipos para que solo incluya las filas donde 'simple_cod' está en codigos_en_uso
+        df_equipos_filtrado = df_equipos[df_equipos['simple_cod'].isin(codigos_en_uso)]
 
         # Definir el mapeo de campos a mostrar
         field_mapping = {
@@ -844,9 +754,8 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
                             tabla_equipo.rows[row_num].cells[1].text = ""
                     else:
                         tabla_equipo.rows[row_num].cells[1].text = str(row_eq.get(key, ""))
-                        set_column_width(tabla_equipo, 0, Cm(4))
-                        set_column_width(tabla_equipo, 1, Cm(14))
-
+                        tabla_equipo.rows[row_num].cells[0].width = Cm(4)
+                        tabla_equipo.rows[row_num].cells[1].width = Cm(14)
                 doc.add_paragraph("")  # Separador entre tablas
         else:
             doc.add_paragraph("No se encontró información de equipos de medición relacionados con la visita.")
@@ -867,8 +776,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         add_row(table_calib, "Verificación TG final", row_visita.get('ver_tg_fin', ''))
     else:
         add_row(table_calib, "D. Detalles de equipos y calibración", "No se encontró información de visita.")
-    set_column_width(table_calib, 0, Cm(4))
-    set_column_width(table_calib, 1, Cm(14))
 
 
     # -------------------------------
@@ -878,7 +785,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     doc.save(buffer)
     buffer.seek(0)
     return buffer
-
 
 # -----------------------------------------------
 # FUNCIÓN PRINCIPAL (OPCIONAL) PARA GENERAR EL INFORME

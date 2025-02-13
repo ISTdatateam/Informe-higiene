@@ -12,20 +12,12 @@ st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 
 
 def interpret_pmv(pmv_value):
-    if pmv_value >= 2.5:
-        return "Calurosa"
-    elif pmv_value >= 1.5:
-        return "Cálida"
-    elif pmv_value >= 0.5:
-        return "Ligeramente cálida"
-    elif pmv_value > -0.5:
-        return "Neutra - Confortable"
-    elif pmv_value > -1.5:
-        return "Ligeramente fresca"
-    elif pmv_value > -2.5:
-        return "Fresca"
+    if pmv_value >= 1:
+        return "NO CUMPLE"
+    elif pmv_value > -1:
+        return "CUMPLE"
     else:
-        return "Fría"
+        return "NO CUMPLE"
 
 
 def main():
