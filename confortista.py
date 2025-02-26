@@ -465,17 +465,6 @@ if submit:
                     #st.markdown(f"**Prioridad:** `{rec['nivel']}` | **Plazo:** `{rec['plazo']}`")
                     st.markdown(f"**Prioridad:** `{rec['nivel']}`")
                     # Manejo de diferentes estructuras de acciones
-                    if 'acciones' in rec:
-                        if isinstance(rec['acciones'], dict):
-                            st.write("**Plan de Acción:**")
-                            for subtipo, acciones in rec['acciones'].items():
-                                st.markdown(f"**{subtipo.capitalize()}:**")
-                                for accion in acciones:
-                                    st.write(f"- {accion}")
-                        else:
-                            st.write("**Acciones recomendadas:**")
-                            for accion in rec['acciones']:
-                                st.write(f"- {accion}")
 
                     # Detalles técnicos de ajustes
                     if 'detalles' in rec:
@@ -488,6 +477,20 @@ if submit:
                               **Objetivo:** {ajuste['objetivo']}  
                               **Acción:** {ajuste['accion']}
                             """)
+
+                    if 'acciones' in rec:
+                        if isinstance(rec['acciones'], dict):
+                            st.write("**Plan de Acción:**")
+                            for subtipo, acciones in rec['acciones'].items():
+                                st.markdown(f"**{subtipo.capitalize()}:**")
+                                for accion in acciones:
+                                    st.write(f"- {accion}")
+                        else:
+                            st.write("**Acciones recomendadas:**")
+                            for accion in rec['acciones']:
+                                st.write(f"- {accion}")
+
+
 
                     # Acción inmediata si existe
                     if 'accion' in rec:
