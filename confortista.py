@@ -4,7 +4,7 @@ from scipy.optimize import brentq
 import numpy as np
 import pandas as pd
 
-st.header("CONFORTISTA 1.0")
+st.header("CONFORTISTA 1.1.20250226")
 st.subheader("Asistente de Control de Confort Térmico")
 
 def color_pmv(val):
