@@ -61,7 +61,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
             'tipo': 'ajustes_tecnicos',
             'categoria': 'Optimización',
             'nivel': 'Prioridad 1',
-            'mensaje': "Ajustes específicos por parámetros críticos",
+            'mensaje': "Ajustes específicos por parámetros evaluados",
             'detalles': ajustes
         })
 
@@ -469,7 +469,6 @@ if submit:
 
                     # Detalles técnicos de ajustes
                     if 'detalles' in rec:
-                        st.write("---")
                         st.write("**Ajustes específicos:**")
                         for ajuste in rec['detalles']:
                             st.markdown(f"""
