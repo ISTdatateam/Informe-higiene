@@ -373,7 +373,8 @@ if submit:
     cols = st.columns(2)
     cols[0].metric("PMV Inicial",
                    f"{pmv_initial:.2f}" if not np.isnan(pmv_initial) else "Error",
-                   "✅ En confort" if -1 < pmv_initial < 1 else "⚠️ Fuera de rango")  # Exclusivo para (-1, 1)
+                   "✅ En confort" if -1 < pmv_initial < 1 else "⚠️ Fuera de rango",
+                   delta_color="off")  # Exclusivo para (-1, 1)
     cols[1].metric("PPD Inicial", f"{ppd_initial:.2f}")
 
     # Nuevo bloque añadido: Detalles de parámetros finales
@@ -406,9 +407,9 @@ if submit:
     cols = st.columns(2)
     cols[0].metric("PMV Final",
                    f"{pmv_final:.2f}" if not np.isnan(pmv_final) else "Error",
-                   "✅ En confort" if -1 < pmv_final < 1 else "⚠️ Fuera de rango")  # Exclusivo para (-1, 1)
+                   "✅ En confort" if -1 < pmv_final < 1 else "⚠️ Fuera de rango",
+                   delta_color="off")  # Exclusivo para (-1, 1)
     cols[1].metric("PPD Final", f"{ppd_final:.2f}")
-
 
     # Nuevo bloque añadido: Detalles de parámetros finales
     with st.expander("🔍 Parámetros utilizados para el cálculo final", expanded=True):
