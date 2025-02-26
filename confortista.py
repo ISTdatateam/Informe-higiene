@@ -160,7 +160,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
         recomendaciones.append({
             'tipo': 'ajustes_tecnicos',
             'categoria': 'Optimización',
-            'nivel': 'Prioridad 4',
+            'nivel': 'Prioridad 1',
             'mensaje': "Ajustes específicos por parámetros críticos",
             'detalles': ajustes
         })
