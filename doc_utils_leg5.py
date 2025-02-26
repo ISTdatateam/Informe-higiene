@@ -12,7 +12,6 @@ from PIL import ImageOps  # Asegúrate de tener Pillow instalado
 from io import BytesIO
 from docx.oxml.ns import qn
 from datetime import datetime
-from docx.enum.table import WD_ALIGN_VERTICAL
 
 # Configuración básica del logging
 # logging.basicConfig(level=logging.INFO)
@@ -374,231 +373,6 @@ def add_row(table, label, value="", first=False):
         if first:
             format_row(row)
 
-
-
-####
-# Añade al final de doc_utils.py
-
-def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_final, tr_final):
-    recomendaciones = []
-
-    # Calcular diferencias térmicas importantes
-    dif_temp = tr_initial - tdb_initial
-    exceso_tdb = tdb_initial - tdb_final > 1
-    exceso_tr = tr_initial - tr_final > 1
-
-    # 1. Estrategias principales según condición térmica
-    estrategias_base = []
-
-    if pmv > 1.0:  # Ambiente caluroso
-        estrategias_base = [
-            {
-                'condicion': True,  # Siempre aplica para calor
-                'tipo': 'enfriamiento',
-                'mensaje': "Refrigeración activa requerida",
-                'acciones': [
-                    "Adquirir enfriadores portátiles (1-2 por área)",
-                    "Coordinar protocolos de recarga con proveedores",
-                    "Instalar sistemas HVAC en áreas críticas"
-                ],
-                'plazo': '3-6 meses'
-            },
-            {
-                'condicion': dif_temp > 2.0,
-                'tipo': 'aislamiento',
-                'mensaje': "Reducción de carga térmica",
-                'acciones': [
-                    "Instalar materiales aislantes en techos/paredes",
-                    "Implementar protecciones solares reflectivas",
-                    "Aislar fuentes de calor radiante"
-                ],
-                'plazo': '3 meses'
-            },
-            {
-                'condicion': vr < 0.2,
-                'tipo': 'ventilacion',
-                'mensaje': f"VR actual: {vr} m/s - Aumentar ventilación",
-                'acciones': [
-                    "Instalar ventiladores (mínimo 2 por área)",
-                    "Implementar sistemas de extracción forzada",
-                    "Optimizar ventilación cruzada"
-                ],
-                'plazo': '3 meses'
-            }
-        ]
-    elif pmv < -1.0:  # Ambiente frío
-        estrategias_base = [
-            {
-                'condicion': True,
-                'tipo': 'calefaccion',
-                'mensaje': "Protección contra el frío",
-                'acciones': [
-                    "Implementar sistemas de calefacción radiante",
-                    "Mejorar aislamiento térmico en envolvente",
-                    "Optimizar sellado de infiltraciones"
-                ],
-                'plazo': '3 meses'
-            }
-        ]
-
-    # Filtrar y agregar estrategias válidas
-    for estrategia in estrategias_base:
-        if estrategia['condicion']:
-            recomendaciones.append({
-                'tipo': estrategia['tipo'],
-                'categoria': 'Estrategia Principal',
-                'nivel': 'Prioridad 2',
-                'mensaje': estrategia['mensaje'],
-                'acciones': estrategia.get('acciones', []),
-                'plazo': estrategia.get('plazo', 'Inmediato')
-            })
-
-    # 2. Mantenimiento (siempre aplica)
-    mantenimiento = {
-        'preventivo': [
-            "Programar mantención de equipos con proveedores",
-            "Calendario de limpieza de filtros/paneles",
-            "Verificación mensual de sistemas"
-        ],
-        'correctivo': [
-            "Reparación de sistemas de ventilación",
-            "Ajuste de equipos de climatización",
-            "Registro de intervenciones técnicas"
-        ],
-        'control': [
-            f"Regulación térmica (23-26°C) con registro",
-            "Monitoreo continuo de parámetros ambientales"
-        ]
-    }
-
-    recomendaciones.append({
-        'tipo': 'mantenimiento',
-        'categoria': 'Gestión Técnica',
-        'nivel': 'Prioridad 3',
-        'mensaje': "Programa de mantenimiento integral",
-        'acciones': mantenimiento,
-        'plazo': 'Continuo'
-    })
-
-    # 3. Medidas administrativas (siempre aplican)
-    recomendaciones.append({
-        'tipo': 'administrativa',
-        'categoria': 'Comunicación',
-        'nivel': 'Prioridad 3',
-        'acciones': [
-            "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°44)",
-            "Establecer registros firmados de capacitación"
-        ],
-        'plazo': '30 días'
-    })
-
-    return recomendaciones
-
-def crear_tabla_recomendaciones(doc, tipo_medida, medidas):
-    """Crea tabla de recomendaciones por tipo de medida"""
-    # Configurar encabezados según el tipo
-    headers = ["Ámbito", "Tipo de Medida", "Acciones", "Plazo"]
-    col_widths = [Cm(3), Cm(3.5), Cm(8), Cm(2.5)]
-
-    # Crear tabla
-    table = doc.add_table(rows=1, cols=4)
-    table.style = 'Table Grid'
-
-    # Configurar anchos de columna
-    for idx, width in enumerate(col_widths):
-        set_column_width(table, idx, width)
-
-    # Formatear cabecera
-    hdr_cells = table.rows[0].cells
-    for idx, header in enumerate(headers):
-        hdr_cells[idx].text = header
-    format_row(table.rows[0], shading_color="4F0B7B")  # Morado corporativo
-
-    # Llenar con medidas
-    for medida in medidas:
-        row_cells = table.add_row().cells
-        row_cells[0].text = "\n".join(medida['areas'])
-        row_cells[1].text = medida['tipo_medida']
-        row_cells[2].text = "\n".join([f"• {a}" for a in medida['acciones']])
-        row_cells[3].text = medida['plazo']
-
-        # Formato vertical centrado
-        for cell in row_cells:
-            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-
-    return table
-
-def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
-    # 1. Medidas Ingenieriles (solo para áreas no conformes)
-    medidas_ingenieriles = []
-    if areas_no_cumplen:
-        for area in areas_no_cumplen:
-            grupo = df_mediciones[df_mediciones['nombre_area'] == area]
-            avg_params = {
-                'tdb': grupo['t_bul_seco'].mean(),
-                'tr': grupo['t_globo'].mean(),
-                'vr': grupo['vel_air'].mean(),
-                'rh': grupo['hum_rel'].mean(),
-                'met': grupo['met'].mean(),
-                'clo': grupo['clo'].mean(),
-                'pmv': grupo['pmv'].mean()
-            }
-
-            recs = generar_recomendaciones(
-                pmv=avg_params['pmv'],
-                tdb_initial=avg_params['tdb'],
-                tr_initial=avg_params['tr'],
-                vr=avg_params['vr'],
-                rh=avg_params['rh'],
-                met=avg_params['met'],
-                clo=avg_params['clo'],
-                tdb_final=avg_params['tdb'] - 2 if avg_params['pmv'] > 1 else avg_params['tdb'] + 2,
-                tr_final=avg_params['tr'] - 1.5 if avg_params['pmv'] > 1 else avg_params['tr'] + 1.5
-            )
-
-            for rec in recs:
-                if rec['tipo'] in ['ventilacion', 'enfriamiento', 'aislamiento']:
-                    medidas_ingenieriles.append({
-                        'tipo_medida': rec['categoria'],
-                        'areas': [area],
-                        'acciones': rec['acciones'],
-                        'plazo': rec['plazo']
-                    })
-
-    # 2. Medidas Administrativas (siempre se incluyen)
-    medidas_administrativas = [
-        {
-            'tipo_medida': 'Comunicación',
-            'areas': ['Todas'],
-            'acciones': [
-                "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°44)",
-                "Establecer registros firmados de capacitación"
-            ],
-            'plazo': '30 días'
-        },
-        {
-            'tipo_medida': 'Mantenimiento',
-            'areas': areas_no_cumplen if areas_no_cumplen else ['Todas'],
-            'acciones': [
-                "Preventivo: Programar mantención periódica de equipos",
-                "Correctivo: Reparación de sistemas de climatización",
-                "Control: Monitoreo continuo de parámetros ambientales"
-            ],
-            'plazo': 'Continuo'
-        }
-    ]
-
-    # Agregar secciones al documento
-    doc.add_heading("Medidas de Carácter Ingenieril", level=2)
-    if medidas_ingenieriles:
-        crear_tabla_recomendaciones(doc, "Ingenieril", medidas_ingenieriles)
-    else:
-        doc.add_paragraph("No se requieren medidas ingenieriles para este caso.")
-
-    doc.add_heading("Medidas de Carácter Administrativo", level=2)
-    crear_tabla_recomendaciones(doc, "Administrativa", medidas_administrativas)
-
-######
 
 # -----------------------------------------------
 # FUNCIÓN PARA GENERAR EL DOCUMENTO WORD
@@ -1020,16 +794,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
                 "No se encontró información suficiente en las mediciones para emitir una conclusión sobre el confort térmico."
             )
 
-
-    # -------------------------------
-    # 4) MEDIDAS CORRECTIVAS
-    # -------------------------------
-    agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen)
-    doc.add_paragraph()
-
-    # -------------------------------
-    # 5) VIGENCIA DEL INFORME
-    # -------------------------------
     # Encabezado principal del contenido: Vigencia del informe
     doc.add_paragraph()
     paragraph = doc.add_heading("Vigencia del informe", level=2)
@@ -1041,10 +805,11 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         doc.add_paragraph(
             "Estos resultados de evaluación representan las condiciones existentes del ambiente y lugar de trabajo al momento de realizar las mediciones."
         )
+
     doc.add_paragraph()
 
     # -------------------------------
-    # 6) ANEXOS
+    # 4) ANEXOS
     # -------------------------------
     doc.add_page_break()
     doc.add_heading("Equipos de medición utilizado", level=2)
@@ -1128,6 +893,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     doc.save(buffer)
     buffer.seek(0)
     return buffer
+
 
 # -----------------------------------------------
 # FUNCIÓN PRINCIPAL (OPCIONAL) PARA GENERAR EL INFORME

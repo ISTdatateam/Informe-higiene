@@ -6,11 +6,11 @@ import pandas as pd
 from data_access import get_centro, get_visita, get_mediciones, get_equipos
 
 # Importa la función para generar el informe en Word (adaptada para trabajar con DB)
-from doc_utils import generar_informe_en_word
+from doc_utils import generar_informe_en_word, agregar_medidas_correctivas
 
 def main():
     st.header("Informes Confort Térmico")
-    st.write("Versión 2.4.20250203")
+    st.write("Versión 3.1.20250226")
     st.write("Bienvenido Rodrigo... (usuario)")
 
     # Inicializamos en session_state las variables que usaremos para almacenar la info consultada
@@ -26,7 +26,7 @@ def main():
         st.session_state["input_cuv"] = ""
 
     # Campo para ingresar el CUV
-    input_cuv = st.text_input("Ingresa el CUV: ej. 114123")
+    input_cuv = st.text_input("Ingresa el CUV: ej. 178050")
 
     # Botón "Buscar" que realiza las consultas a la base de datos
     if st.button("Buscar"):
