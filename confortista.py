@@ -21,17 +21,49 @@ def color_pmv(val):
 def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_final, tr_final):
     recomendaciones = []
 
-    # Capa 1: Medidas Administrativas (siempre aplican)
-    recomendaciones.append({
-        'tipo': 'administrativa',
-        'categoria': 'Comunicación',
-        'nivel': 'Prioridad 2',
-        'acciones': [
-            "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°40)",
-            "Establecer registros firmados de capacitación"
-        ],
-        'plazo': '30 días'
-    })
+
+    # Capa 1: Ajustes específicos según parámetros
+    ajustes = []
+
+    # 1. Velocidad del Aire
+    if pmv > 1.0 and vr < 0.2:
+        ajustes.append({
+            'tipo': 'ventilacion',
+            'parametro': 'VR',
+            'actual': vr,
+            'objetivo': 0.2,
+            'accion': "Aumentar velocidad del aire mediante ventilación forzada"
+        })
+
+    # 2. Temperatura Radiante
+    dif_temp = tr_initial - tdb_initial
+    if abs(dif_temp) > 2.0:
+        ajustes.append({
+            'tipo': 'temperatura',
+            'parametro': 'Tr-Tdb',
+            'actual': dif_temp,
+            'objetivo': "≤2.0°C",
+            'accion': "Balancear temperaturas mediante aislamiento/ventilación"
+        })
+
+    # 3. Humedad Relativa
+    if rh > 70:
+        ajustes.append({
+            'tipo': 'humedad',
+            'parametro': 'HR',
+            'actual': rh,
+            'objetivo': "≤70%",
+            'accion': "Instalar deshumidificadores + ventilación controlada"
+        })
+
+    if ajustes:
+        recomendaciones.append({
+            'tipo': 'ajustes_tecnicos',
+            'categoria': 'Optimización',
+            'nivel': 'Prioridad 1',
+            'mensaje': "Ajustes específicos por parámetros críticos",
+            'detalles': ajustes
+        })
 
     # Capa 2: Estrategias según PMV
     if pmv > 1.0:  # Ambiente caluroso
@@ -122,48 +154,17 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
         'plazo': 'Continuo'
     })
 
-    # Capa 4: Ajustes específicos según parámetros
-    ajustes = []
-
-    # 1. Velocidad del Aire
-    if pmv > 1.0 and vr < 0.2:
-        ajustes.append({
-            'tipo': 'ventilacion',
-            'parametro': 'VR',
-            'actual': vr,
-            'objetivo': 0.2,
-            'accion': "Aumentar velocidad del aire mediante ventilación forzada"
-        })
-
-    # 2. Temperatura Radiante
-    dif_temp = tr_initial - tdb_initial
-    if abs(dif_temp) > 2.0:
-        ajustes.append({
-            'tipo': 'temperatura',
-            'parametro': 'Tr-Tdb',
-            'actual': dif_temp,
-            'objetivo': "≤2.0°C",
-            'accion': "Balancear temperaturas mediante aislamiento/ventilación"
-        })
-
-    # 3. Humedad Relativa
-    if rh > 70:
-        ajustes.append({
-            'tipo': 'humedad',
-            'parametro': 'HR',
-            'actual': rh,
-            'objetivo': "≤70%",
-            'accion': "Instalar deshumidificadores + ventilación controlada"
-        })
-
-    if ajustes:
-        recomendaciones.append({
-            'tipo': 'ajustes_tecnicos',
-            'categoria': 'Optimización',
-            'nivel': 'Prioridad 1',
-            'mensaje': "Ajustes específicos por parámetros críticos",
-            'detalles': ajustes
-        })
+    # Capa 4: Medidas Administrativas (siempre aplican)
+    recomendaciones.append({
+        'tipo': 'administrativa',
+        'categoria': 'Comunicación',
+        'nivel': 'Prioridad 2',
+        'acciones': [
+            "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°40)",
+            "Establecer registros firmados de capacitación"
+        ],
+        'plazo': '30 días'
+    })
 
     return recomendaciones
 
