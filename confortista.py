@@ -167,7 +167,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
 
     return recomendaciones
 
-def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, met, clo, target_pmv, max_iter=20):
+def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, met, clo, target_pmv, max_iter=30):
 
     # Parámetros ajuste
     tol_temp = 0.01
@@ -233,22 +233,13 @@ def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, 
         except Exception as e:
             st.error(f"Error Candidate2 en la iteración {i+1}: {str(e)}")
 
-
-        #except ValueError:
-        #    # Fallback a método de bisección si hay error de signos
-        #    candidate2 = (lower_bound + upper_bound) / 2
-        #except Exception as e:
-        #    st.error(f"Error Candidate2 en la iteración {i+1}: {str(e)}")
-        #    candidate2 = (tdb_adj + tr_adj) / 2
-
-
         # Actualizar Tdb y Tr utilizando el factor de ajuste
         prev_tdb = tdb_adj  # <--- AÑADIR ESTA LÍNEA
         prev_tr = tr_adj  # Opcional: Para consistencia
 
 
         # Después - Limitar cambio máximo por iteración
-        max_change = 0.5 # Máximo 2°C por iteración
+        max_change = 0.25 # Máximo 2°C por iteración
         change_tdb = factor * (candidate2 - tdb_adj)
         change_tr = factor * (candidate2 - tr_adj)
 
@@ -261,6 +252,7 @@ def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, 
         # Recalcular PMV con los nuevos valores
         try:
             new_pmv = pmv_ppd_iso(tdb_adj, tr_adj, vr_adj, rh, met, clo, limit_inputs=False).pmv
+            new_ppd = pmv_ppd_iso(tdb_adj, tr_adj, vr_adj, rh, met, clo, limit_inputs=False).ppd
         except Exception as e:
             st.error(f"Error al recalcular PMV en la iteración {i+1}: {str(e)}")
             new_pmv = np.nan
@@ -271,7 +263,9 @@ def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, 
             'Tdb': round(tdb_adj, 2),
             'Tr': round(tr_adj, 2),
             'VR': vr_adj,
+            'PPD': round(new_ppd, 3),
             'PMV': round(new_pmv, 3) if not np.isnan(new_pmv) else "Error"
+
         })
 
         # Condición de corte (usar new_pmv)
@@ -336,6 +330,11 @@ if submit:
             rh=rh, met=met, clo=clo,
             limit_inputs=False
         ).pmv
+        ppd_initial = pmv_ppd_iso(
+            tdb=tdb, tr=tr, vr=vr,
+            rh=rh, met=met, clo=clo,
+            limit_inputs=False
+        ).ppd
     except:
         st.error("Error en cálculo inicial. Verifique los valores ingresados.")
         st.stop()
@@ -360,18 +359,56 @@ if submit:
             tdb=tdb_final, tr=tr_final, vr=vr_final,
             rh=rh, met=met, clo=clo
         ).pmv
+        ppd_final = pmv_ppd_iso(
+            tdb=tdb_final, tr=tr_final, vr=vr_final,
+            rh=rh, met=met, clo=clo
+        ).ppd
     except:
         pmv_final = np.nan
 
     # Mostrar resultados
+
+    st.header("📋 Condiciones iniciales evaluadas")
+
+    cols = st.columns(2)
+    cols[0].metric("PMV Inicial",
+                   f"{pmv_initial:.2f}" if not np.isnan(pmv_initial) else "Error",
+                   "✅ En confort" if -1 < pmv_initial < 1 else "⚠️ Fuera de rango")  # Exclusivo para (-1, 1)
+    cols[1].metric("PPD Inicial", f"{ppd_initial:.2f}")
+
+    # Nuevo bloque añadido: Detalles de parámetros finales
+    with st.expander("🔍 Parámetros utilizados para el cálculo inicial", expanded=True):
+        param_cols = st.columns(3)
+        param_cols[0].markdown(f"""
+            **Variables térmicas:**  
+            - T. Aire: `{tdb:.1f}°C`  
+            - T. Radiante: `{tr:.1f}°C`  
+            - Vel. Aire: `{vr:.2f} m/s`
+            """)
+
+        param_cols[1].markdown(f"""
+            **Factores humanos:**  
+            - Metabolismo: `{met:.1f} met`  
+            - Vestimenta: `{clo:.1f} CLO`  
+            - Humedad: `{rh:.0f}%`
+            """)
+
+        param_cols[2].markdown(f"""
+            **Objetivos:**  
+            - PMV Target: `{target_pmv:.2f}`  
+            - Tolerancia: `±0.05°C`  
+            - Máx iteraciones: `20`
+            """)
+
+
     st.header("📊 Resultados de la Optimización")
 
-    cols = st.columns(3)
-    cols[0].metric("PMV Inicial", f"{pmv_initial:.2f}")
-    cols[1].metric("PMV Final",
+    cols = st.columns(2)
+    cols[0].metric("PMV Final",
                    f"{pmv_final:.2f}" if not np.isnan(pmv_final) else "Error",
                    "✅ En confort" if -1 < pmv_final < 1 else "⚠️ Fuera de rango")  # Exclusivo para (-1, 1)
-    cols[2].metric("Iteraciones", len(historial))
+    cols[1].metric("PPD Final", f"{ppd_final:.2f}")
+
 
     # Nuevo bloque añadido: Detalles de parámetros finales
     with st.expander("🔍 Parámetros utilizados para el cálculo final", expanded=True):
@@ -465,7 +502,7 @@ if submit:
             st.success("✅ ¡Condiciones óptimas! No se requieren ajustes adicionales.")
 
     # Mostrar progreso detallado
-    with st.expander("Ver detalles del proceso de ajuste"):
+    with st.expander("Ver detalles del proceso de ajuste: " + str(len(historial)) + " iteraciones"):
         st.write("**Historial de ajustes:**")
         df_historial = pd.DataFrame(historial)
         st.dataframe(df_style(df_historial), height=300)
