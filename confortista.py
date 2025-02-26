@@ -29,38 +29,45 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
     if pmv > 1.0 and vr < 0.2:
         ajustes.append({
             'tipo': 'ventilacion',
-            'parametro': 'VR',
+            'parametro': 'Velocidad del aire',
             'actual': vr,
             'objetivo': 0.2,
-            'accion': "Aumentar velocidad del aire mediante ventilación forzada"
         })
 
     # 2. Temperatura Radiante
     dif_temp = tr_initial - tdb_initial
-    if abs(dif_temp) > 2.0:
+    if dif_temp > 2.0:
         ajustes.append({
             'tipo': 'temperatura',
-            'parametro': 'Tr-Tdb',
+            'parametro': 'Exceso de radiación (Tr-Tdb)',
             'actual': dif_temp,
             'objetivo': "≤2.0°C",
-            'accion': "Balancear temperaturas mediante aislamiento/ventilación"
         })
 
-    # 3. Humedad Relativa
-    if rh > 70:
+    # 3. Temperatura del Aire
+    dif_tdb = tdb_initial - tdb_final
+    if dif_tdb > 1:
         ajustes.append({
-            'tipo': 'humedad',
-            'parametro': 'HR',
-            'actual': rh,
-            'objetivo': "≤70%",
-            'accion': "Instalar deshumidificadores + ventilación controlada"
+            'tipo': 'temperatura',
+            'parametro': 'Exceso de temperatura del aire',
+            'actual': tdb_initial,
+            'objetivo': tdb_final,
+        })
+
+    # 3. Temperatura del Aire
+    dif_tr = tr_initial - tr_final
+    if dif_tdb > 1:
+        ajustes.append({
+            'tipo': 'temperatura',
+            'parametro': 'Exceso de calor radiante',
+            'actual': tr_initial,
+            'objetivo': tr_final,
         })
 
     if ajustes:
         recomendaciones.append({
             'tipo': 'ajustes_tecnicos',
             'categoria': 'Optimización',
-            'nivel': 'Prioridad 1',
             'mensaje': "Ajustes específicos por parámetros evaluados",
             'detalles': ajustes
         })
@@ -68,15 +75,6 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
     # Capa 2: Estrategias según PMV
     if pmv > 1.0:  # Ambiente caluroso
         estrategias = {
-            'ventilacion': {
-                'mensaje': f"VR actual: {vr} m/s - Aumentar ventilación",
-                'acciones': [
-                    "Instalar ventiladores (mínimo 2 por área)",
-                    "Implementar sistemas de extracción forzada",
-                    "Optimizar ventilación cruzada"
-                ],
-                'plazo': '3 meses'
-            },
             'enfriamiento': {
                 'mensaje': "Refrigeración activa requerida",
                 'acciones': [
@@ -85,7 +83,9 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
                     "Instalar sistemas HVAC en áreas críticas"
                 ],
                 'plazo': '3-6 meses'
-            },
+            }}
+        if dif_temp > 2.0:
+            estrategias = estrategias | {
             'aislamiento': {
                 'mensaje': "Reducción de carga térmica",
                 'acciones': [
@@ -94,9 +94,18 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
                     "Aislar fuentes de calor radiante"
                 ],
                 'plazo': '3 meses'
-            }
-        }
-
+            }}
+        if vr < 0.2:
+            estrategias = estrategias | {
+            'ventilacion': {
+                'mensaje': f"VR actual: {vr} m/s - Aumentar ventilación",
+                'acciones': [
+                    "Instalar ventiladores (mínimo 2 por área)",
+                    "Implementar sistemas de extracción forzada",
+                    "Optimizar ventilación cruzada"
+                ],
+                'plazo': '3 meses'
+                }}
     elif pmv < -1.0:  # Ambiente frío
         estrategias = {
             'calefaccion': {
@@ -136,7 +145,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
             "Registro de intervenciones técnicas"
         ],
         'control': [
-            f"Regulación térmica (25-26°C) con registro",
+            f"Regulación térmica (23-26°C) con registro",
             "Monitoreo continuo de parámetros ambientales"
         ]
     }
@@ -158,9 +167,9 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
     recomendaciones.append({
         'tipo': 'administrativa',
         'categoria': 'Comunicación',
-        'nivel': 'Prioridad 2',
+        'nivel': 'Prioridad 3',
         'acciones': [
-            "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°40)",
+            "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°44)",
             "Establecer registros firmados de capacitación"
         ],
         'plazo': '30 días'
@@ -463,19 +472,23 @@ if submit:
 
                 with st.expander(titulo, expanded=True):
                     # Sección de información básica
-                    #st.markdown(f"**Prioridad:** `{rec['nivel']}` | **Plazo:** `{rec['plazo']}`")
-                    st.markdown(f"**Prioridad:** `{rec['nivel']}`")
+                    labels = []
+                    if 'nivel' in rec:
+                        labels.append(f"**Prioridad:** `{rec['nivel']}`")
+                    if 'plazo' in rec:
+                        labels.append(f"**Plazo:** `{rec['plazo']}`")
+                    if labels:
+                        st.markdown(" | ".join(labels))
                     # Manejo de diferentes estructuras de acciones
 
                     # Detalles técnicos de ajustes
                     if 'detalles' in rec:
-                        st.write("**Ajustes específicos:**")
+                        st.write("**Parametros a modificar con las medidas prescritas:**")
                         for ajuste in rec['detalles']:
                             st.markdown(f"""
                             - **Parámetro:** {ajuste['parametro']}  
                               **Actual:** {ajuste['actual']}  
                               **Objetivo:** {ajuste['objetivo']}  
-                              **Acción:** {ajuste['accion']}
                             """)
 
                     if 'acciones' in rec:
