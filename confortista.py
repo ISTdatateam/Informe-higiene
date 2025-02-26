@@ -222,10 +222,10 @@ def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, 
 
         # Aplicamos la función cuadrática para diff_pmv ≤ 2
         if diff_pmv <= 2:
-            factor = 0.09 * (diff_pmv ** 2) - 0.43 * diff_pmv + 1
+            factor = 0.09 * (diff_pmv ** 2) - 0.43 * diff_pmv + 0.8
         else:
             # Para diff_pmv > 2, mantenemos el valor mínimo alcanzado (0.5)
-            factor = 0.5
+            factor = 0.3
 
         # Verificar que el intervalo es válido
         if lower_bound >= upper_bound:
@@ -249,7 +249,7 @@ def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, 
 
 
         # Después - Limitar cambio máximo por iteración
-        max_change = 0.25 # Máximo 2°C por iteración
+        max_change = 0.5 # Máximo 2°C por iteración
         change_tdb = factor * (candidate2 - tdb_adj)
         change_tr = factor * (candidate2 - tr_adj)
 
