@@ -249,7 +249,7 @@ def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, 
 
 
         # Después - Limitar cambio máximo por iteración
-        max_change = 0.5 # Máximo 2°C por iteración
+        max_change = 1 # Máximo 1°C por iteración
         change_tdb = factor * (candidate2 - tdb_adj)
         change_tr = factor * (candidate2 - tr_adj)
 
