@@ -17,136 +17,194 @@ def color_pmv(val):
     except:
         return ''
 
+
 def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_final, tr_final):
     recomendaciones = []
 
-    # 1. Análisis de Velocidad del Aire (VR) - Se mantiene igual
-    if pmv > 1.0 and vr < 0.5:
-        recomendaciones.append({
-            'tipo': 'ventilacion',
-            'mensaje': f"Aumentar velocidad del aire a 0.5 m/s usando ventiladores (VR actual: {vr} m/s)",
-            'accion': {'vr': 0.5}
-        })
-    elif pmv < -1.0 and vr > 0.5:
-        recomendaciones.append({
-            'tipo': 'ventilacion',
-            'mensaje': "Reducir corrientes de aire frío (aumentan sensación de frío)",
-            'accion': {'vr': 0.5}
-        })
+    # Capa 1: Medidas Administrativas (siempre aplican)
+    recomendaciones.append({
+        'tipo': 'administrativa',
+        'categoria': 'Comunicación',
+        'nivel': 'Prioridad 2',
+        'acciones': [
+            "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°40)",
+            "Establecer registros firmados de capacitación"
+        ],
+        'plazo': '30 días'
+    })
 
-        # Modificar lógica de estrategias
-        if pmv > 1.0:
-            accion_tdb = f"Reducir Tdb desde {tdb_initial}°C a {tdb_final}°C" if tdb_final < tdb_initial else f"Mantener Tdb en {tdb_final}°C"
-            accion_tr = f"Reducir Tr desde {tr_initial}°C a {tr_final}°C" if tr_final < tr_initial else f"Mantener Tr en {tr_final}°C"
-        else:
-            accion_tdb = f"Aumentar Tdb desde {tdb_initial}°C a {tdb_final}°C" if tdb_final < tdb_initial else f"Mantener Tdb en {tdb_final}°C"
-            accion_tr = f"Aumentar Tr desde {tr_initial}°C a {tr_final}°C" if tr_final < tr_initial else f"Mantener Tr en {tr_final}°C"
-
-
-
-    # 2. Relación entre Temperatura Radiante (Tr) y del Aire (Tdb) - Modificado
-    dif_temp = tr - tdb
-    if dif_temp > 3.0:
-        recomendaciones.append({
-            'tipo': 'temperatura_radiante',
-            'mensaje': f"Temperatura radiante elevada (Tr-Tdb = {dif_temp:.1f}°C). Medidas sugeridas:",
-            'acciones': [
-                f"Reducir Tr desde {tr}°C hasta aproximadamente {tr_final}°C con aislamiento",
-                "Instalar superficies reflectantes",
-                "Controlar fuentes de radiación (ventanas, equipos)"
-            ]
-        })
-    elif dif_temp < -2.0:
-        recomendaciones.append({
-            'tipo': 'temperatura_radiante',
-            'mensaje': f"Temperatura radiante baja (Tr-Tdb = {dif_temp:.1f}°C). Medidas sugeridas:",
-            'acciones': [
-                f"Aumentar Tr desde {tr}°C hasta aproximadamente {tr_final}°C",
-                "Considerar calefacción radiante"
-            ]
-        })
-
-    # 3. Estrategias según dirección del ajuste - Modificado
+    # Capa 2: Estrategias según PMV
     if pmv > 1.0:  # Ambiente caluroso
-        recomendaciones.append({
-            'tipo': 'enfriamiento',
-            'mensaje': "Estrategias de enfriamiento:",
-            'acciones': [
-                f"Reducir Tdb desde {tdb}°C hasta aproximadamente {tdb_final}°C mediante HVAC" if tdb_final < tdb_initial else f"Mantener Tdb en {tdb_final}°C",
-                f"Reducir Tr desde {tr}°C hasta aproximadamente {tr_final}°C con sombreado" if tr_final < tr_initial else f"Mantener Tr en {tr_final}°C",
-                "Ventilación cruzada para aumentar disipación térmica"
-            ]
-        })
+        estrategias = {
+            'ventilacion': {
+                'mensaje': f"VR actual: {vr} m/s - Aumentar ventilación",
+                'acciones': [
+                    "Instalar ventiladores (mínimo 2 por área)",
+                    "Implementar sistemas de extracción forzada",
+                    "Optimizar ventilación cruzada"
+                ],
+                'plazo': '3 meses'
+            },
+            'enfriamiento': {
+                'mensaje': "Refrigeración activa requerida",
+                'acciones': [
+                    "Adquirir enfriadores portátiles (1-2 por área)",
+                    "Coordinar protocolos de recarga con proveedores",
+                    "Instalar sistemas HVAC en áreas críticas"
+                ],
+                'plazo': '3-6 meses'
+            },
+            'aislamiento': {
+                'mensaje': "Reducción de carga térmica",
+                'acciones': [
+                    "Instalar materiales aislantes en techos/paredes",
+                    "Implementar protecciones solares reflectivas",
+                    "Aislar fuentes de calor radiante"
+                ],
+                'plazo': '3 meses'
+            }
+        }
+
     elif pmv < -1.0:  # Ambiente frío
+        estrategias = {
+            'calefaccion': {
+                'mensaje': "Protección contra el frío",
+                'acciones': [
+                    "Implementar sistemas de calefacción radiante",
+                    "Mejorar aislamiento térmico en envolvente",
+                    "Optimizar sellado de infiltraciones"
+                ],
+                'plazo': '3 meses'
+            }
+        }
+    else:
+        estrategias = {}
+
+    # Agregar estrategias principales
+    for key, value in estrategias.items():
         recomendaciones.append({
-            'tipo': 'calefaccion',
-            'mensaje': "Estrategias de calentamiento:",
-            'acciones': [
-                f"Aumentar Tdb desde {tdb}°C hasta aproximadamente {tdb_final}°C mediante calefacción" if tdb_final < tdb_initial else f"Mantener Tdb en {tdb_final}°C",
-                f"Aumentar Tr desde {tr}°C hasta aproximadamente {tr_final}°C con superficies radiantes" if tr_final < tr_initial else f"Mantener Tr en {tr_final}°C",
-                "Reducir infiltraciones de aire frío"
-            ]
+            'tipo': key,
+            'categoria': 'Estrategia Principal',
+            'nivel': 'Prioridad 2',
+            'mensaje': value['mensaje'],
+            'acciones': value['acciones'],
+            'plazo': value['plazo']
         })
 
-    # 4. Factores adicionales - Se mantiene igual
-    if met < 1.2:
-        recomendaciones.append({
-            'tipo': 'actividad',
-            'mensaje': f"Actividad metabólica baja ({met} met). Considerar:",
-            'acciones': [
-                "Pausas activas para aumentar movimiento",
-                f"Adecuar vestimenta (actual CLO = {clo})"
-            ]
+    # Capa 3: Mantenimiento y Control
+    mantenimiento = {
+        'preventivo': [
+            "Programar mantención de equipos con proveedores",
+            "Calendario de limpieza de filtros/paneles",
+            "Verificación mensual de sistemas"
+        ],
+        'correctivo': [
+            "Reparación de sistemas de ventilación",
+            "Ajuste de equipos de climatización",
+            "Registro de intervenciones técnicas"
+        ],
+        'control': [
+            f"Regulación térmica (25-26°C) con registro",
+            "Monitoreo continuo de parámetros ambientales"
+        ]
+    }
+
+    recomendaciones.append({
+        'tipo': 'mantenimiento',
+        'categoria': 'Gestión Técnica',
+        'nivel': 'Prioridad 3',
+        'mensaje': "Programa de mantenimiento integral",
+        'acciones': {
+            'preventivo': mantenimiento['preventivo'],
+            'correctivo': mantenimiento['correctivo'],
+            'control': mantenimiento['control']
+        },
+        'plazo': 'Continuo'
+    })
+
+    # Capa 4: Ajustes específicos según parámetros
+    ajustes = []
+
+    # 1. Velocidad del Aire
+    if pmv > 1.0 and vr < 0.2:
+        ajustes.append({
+            'tipo': 'ventilacion',
+            'parametro': 'VR',
+            'actual': vr,
+            'objetivo': 0.2,
+            'accion': "Aumentar velocidad del aire mediante ventilación forzada"
         })
 
+    # 2. Temperatura Radiante
+    dif_temp = tr_initial - tdb_initial
+    if abs(dif_temp) > 2.0:
+        ajustes.append({
+            'tipo': 'temperatura',
+            'parametro': 'Tr-Tdb',
+            'actual': dif_temp,
+            'objetivo': "≤2.0°C",
+            'accion': "Balancear temperaturas mediante aislamiento/ventilación"
+        })
+
+    # 3. Humedad Relativa
     if rh > 70:
-        recomendaciones.append({
+        ajustes.append({
             'tipo': 'humedad',
-            'mensaje': f"Humedad relativa elevada ({rh}%. Acciones:",
-            'acciones': [
-                "Usar deshumidificadores",
-                "Mejorar ventilación natural/mecánica"
-            ]
+            'parametro': 'HR',
+            'actual': rh,
+            'objetivo': "≤70%",
+            'accion': "Instalar deshumidificadores + ventilación controlada"
+        })
+
+    if ajustes:
+        recomendaciones.append({
+            'tipo': 'ajustes_tecnicos',
+            'categoria': 'Optimización',
+            'nivel': 'Prioridad 4',
+            'mensaje': "Ajustes específicos por parámetros críticos",
+            'detalles': ajustes
         })
 
     return recomendaciones
 
-def calcular_ajuste_optimo(tdb_initial, tr_initial, vr_initial, rh, met, clo, target_pmv, max_iter=20):
-    # Nueva validación inicial
+def calcular_ajuste_optimo(pmv_initial,tdb_initial, tr_initial, vr_initial, rh, met, clo, target_pmv, max_iter=20):
+
+    # Parámetros ajuste
+    tol_temp = 0.01
+    tol_pmv = 0.001
+    min_temp = 18.0
+    max_temp = 28.0
+
+
+    ajuste_ventilacion = []  # Variable para almacenar el mensaje de ajuste
     tdb_adj = tdb_initial
     tr_adj = tr_initial
     vr_adj = vr_initial  # Nueva variable para VR ajustado
     historial = []
 
-    current_pmv = pmv_ppd_iso(tdb_initial, tr_initial, vr_initial, rh, met, clo, limit_inputs=False).pmv
-    if np.isnan(current_pmv):
-        st.error("Valores iniciales inválidos")
-        return tdb_initial, tr_initial, vr_initial, []
 
-        # Parámetros ajuste
-    tol_temp = 0.001
-    tol_pmv = 0.0001
-    min_temp = 18.0
-    max_temp = 28.0
 
     for i in range(max_iter):
-        # --- Paso 1: Ajuste dinámico de VR dentro de la iteración ---
+
         current_pmv = pmv_ppd_iso(tdb_adj, tr_adj, vr_adj, rh, met, clo, limit_inputs=False).pmv
 
+        # --- Ajuste dinámico de VR dentro de la iteración ---
         # Regla de ajuste de VR solo si estamos fuera de confort
         if not (-1 < current_pmv < 1):
-            if current_pmv > 1.0 and vr_adj < 0.5:
-                vr_adj = 0.5  # Aumentar VR para enfriar
-            elif current_pmv < -1.0 and vr_adj > 0.5:
-                vr_adj = 0.5  # Reducir VR para evitar enfriamiento excesivo
+            if current_pmv > 1.0 and vr < 0.2:
+                vr_adj = 0.2
 
-        # --- Paso 2: Optimización de temperaturas considerando VR actual ---
+            elif current_pmv < -1.0 and vr > 1:
+                vr_adj = 1.0
+
+        current_pmv = pmv_ppd_iso(tdb_adj, tr_adj, vr_adj, rh, met, clo, limit_inputs=False).pmv
+
+        # --- Optimización de temperaturas considerando VR actual ---
         if target_pmv < current_pmv:  # Enfriar
             lower_bound = min_temp
-            upper_bound = min(tdb_adj, tr_adj, max_temp)  # No superar max_temp
-            upper_bound = max(lower_bound, upper_bound)  # Asegurar upper >= lower
+            upper_bound = max(tdb_adj, tr_adj)
         else:  # Calentar
-            lower_bound = max(min(tdb_adj, tr_adj), min_temp)  # No bajar de min_temp
+            lower_bound = min(tdb_adj, tr_adj)
             upper_bound = max_temp
 
         # Definimos x = diff_pmv
@@ -164,19 +222,25 @@ def calcular_ajuste_optimo(tdb_initial, tr_initial, vr_initial, rh, met, clo, ta
             st.error(f"Intervalo inválido en la iteración {i+1}: [{lower_bound}, {upper_bound}]")
             break
 
+
         try:
             candidate2 = brentq(
                 lambda x: pmv_ppd_iso(
                     tdb=x, tr=x, vr=vr, rh=rh, met=met, clo=clo, limit_inputs=False
                 ).pmv - target_pmv,
-                lower_bound, upper_bound, xtol=0.1
+                lower_bound, upper_bound, xtol=0.01
             )
-        except ValueError:
-            # Fallback a método de bisección si hay error de signos
-            candidate2 = (lower_bound + upper_bound) / 2
         except Exception as e:
             st.error(f"Error Candidate2 en la iteración {i+1}: {str(e)}")
-            candidate2 = (tdb_adj + tr_adj) / 2
+
+
+        #except ValueError:
+        #    # Fallback a método de bisección si hay error de signos
+        #    candidate2 = (lower_bound + upper_bound) / 2
+        #except Exception as e:
+        #    st.error(f"Error Candidate2 en la iteración {i+1}: {str(e)}")
+        #    candidate2 = (tdb_adj + tr_adj) / 2
+
 
         # Actualizar Tdb y Tr utilizando el factor de ajuste
         prev_tdb = tdb_adj  # <--- AÑADIR ESTA LÍNEA
@@ -184,18 +248,15 @@ def calcular_ajuste_optimo(tdb_initial, tr_initial, vr_initial, rh, met, clo, ta
 
 
         # Después - Limitar cambio máximo por iteración
-        max_change = 2.0  # Máximo 2°C por iteración
+        max_change = 0.5 # Máximo 2°C por iteración
         change_tdb = factor * (candidate2 - tdb_adj)
         change_tr = factor * (candidate2 - tr_adj)
 
         # Actualizar Tdb/Tr con límites físicos
-        tdb_adj = np.clip(tdb_adj + change_tdb, min_temp, max_temp)
-        tr_adj = np.clip(tr_adj + change_tr, min_temp, max_temp)
+        tdb_adj = np.clip(tdb_adj + change_tdb, (tdb_adj-max_change), (tdb_adj+max_change))
         tdb_adj = round(tdb_adj, 2)
+        tr_adj = np.clip(tr_adj + change_tr, (tr_adj-max_change), (tr_adj+max_change))
         tr_adj = round(tr_adj, 2)
-
-        #tdb_adj += max(min(change_tdb, max_change), -max_change)
-        #tr_adj += max(min(change_tr, max_change), -max_change)
 
         # Recalcular PMV con los nuevos valores
         try:
@@ -279,24 +340,6 @@ if submit:
         st.error("Error en cálculo inicial. Verifique los valores ingresados.")
         st.stop()
 
-    # Ajuste inicial de ventilación con mensaje recomendado
-    vr_ajustado = vr
-    ajuste_ventilacion = None  # Variable para almacenar el mensaje de ajuste
-
-    if pmv_initial > 1.0 and vr < 0.5:
-        vr_ajustado = 0.5
-        ajuste_ventilacion = {
-            'tipo': 'ventilacion',
-            'mensaje': f"Aumentar velocidad del aire de {vr} m/s a 0.5 m/s",
-            'accion': {'vr': vr_ajustado}  # Cambiar a diccionario
-        }
-    elif pmv_initial < -1.0 and vr > 0.5:
-        vr_ajustado = 0.5
-        ajuste_ventilacion = {
-            'tipo': 'ventilacion',
-            'mensaje': f"Reducir velocidad del aire de {vr} m/s a 0.5 m/s",
-            'accion': {'vr': vr_ajustado}  # Cambiar a diccionario
-        }
 
     # Determinar target PMV
     if pmv_initial < -1:
@@ -307,8 +350,8 @@ if submit:
         target_pmv = pmv_initial
 
     # Proceso de optimización
-    tdb_final, tr_final, vr_final, historial = calcular_ajuste_optimo(
-        tdb, tr, vr_ajustado, rh, met, clo, target_pmv
+    tdb_final, tr_final, vr_final, historial = calcular_ajuste_optimo(pmv_initial,
+        tdb, tr, vr, rh, met, clo, target_pmv
     )
 
     # Cálculo final
@@ -337,7 +380,7 @@ if submit:
         **Variables térmicas:**  
         - T. Aire: `{tdb_final:.1f}°C`  
         - T. Radiante: `{tr_final:.1f}°C`  
-        - Vel. Aire: `{vr_ajustado:.2f} m/s`
+        - Vel. Aire: `{vr_final:.2f} m/s`
         """)
 
         param_cols[1].markdown(f"""
@@ -357,33 +400,69 @@ if submit:
     # Recomendaciones
     st.header("🔧 Recomendaciones de Ajuste")
 
-    # Añadir recomendación de ajuste de ventilación si existe
-    recomendaciones = []
-    if ajuste_ventilacion:
-        recomendaciones.append(ajuste_ventilacion)
-
     # Agregar demás recomendaciones
-    recomendaciones += generar_recomendaciones(pmv_initial, tdb, tr, vr_ajustado, rh, met, clo, tdb_final, tr_final)
+    recomendaciones = generar_recomendaciones(pmv_initial, tdb, tr, vr, rh, met, clo, tdb_final, tr_final)
     if recomendaciones:
-        cols_rec = st.columns(2)
+        cols_rec = st.columns(1)
         for i, rec in enumerate(recomendaciones):
-            with cols_rec[i % 2]:
-                with st.expander(f"{rec['tipo'].capitalize()}: {rec['mensaje']}", expanded=True):
-                    # Manejar ambos casos: 'acciones' (lista) y 'accion' (diccionario)
+            with cols_rec[i % 1]:
+                # Construir título con emojis según tipo
+                iconos = {
+                    'administrativa': '📋',
+                    'ventilacion': '🌀',
+                    'enfriamiento': '❄️',
+                    'aislamiento': '🛡️',
+                    'mantenimiento': '🔧',
+                    'ajustes_tecnicos': '⚙️'
+                }
+                icono = iconos.get(rec['tipo'], '📌')
+
+                # Construir título de manera segura
+                titulo = f"{iconos.get(rec['tipo'], '📌')} {rec['categoria']}"
+                if 'mensaje' in rec:
+                    titulo += f": {rec['mensaje']}"
+
+                with st.expander(titulo, expanded=True):
+                    # Sección de información básica
+                    #st.markdown(f"**Prioridad:** `{rec['nivel']}` | **Plazo:** `{rec['plazo']}`")
+                    st.markdown(f"**Prioridad:** `{rec['nivel']}`")
+                    # Manejo de diferentes estructuras de acciones
                     if 'acciones' in rec:
-                        st.write("**Acciones recomendadas:**")
-                        for accion in rec['acciones']:
-                            st.write(f"- {accion}")
+                        if isinstance(rec['acciones'], dict):
+                            st.write("**Plan de Acción:**")
+                            for subtipo, acciones in rec['acciones'].items():
+                                st.markdown(f"**{subtipo.capitalize()}:**")
+                                for accion in acciones:
+                                    st.write(f"- {accion}")
+                        else:
+                            st.write("**Acciones recomendadas:**")
+                            for accion in rec['acciones']:
+                                st.write(f"- {accion}")
+
+                    # Detalles técnicos de ajustes
+                    if 'detalles' in rec:
+                        st.write("---")
+                        st.write("**Ajustes específicos:**")
+                        for ajuste in rec['detalles']:
+                            st.markdown(f"""
+                            - **Parámetro:** {ajuste['parametro']}  
+                              **Actual:** {ajuste['actual']}  
+                              **Objetivo:** {ajuste['objetivo']}  
+                              **Acción:** {ajuste['accion']}
+                            """)
+
+                    # Acción inmediata si existe
                     if 'accion' in rec:
-                        st.write("**Ajuste específico:**")
-                        for k, v in rec['accion'].items():  # Ahora funciona porque es diccionario
-                            st.write(f"- Ajustar {k.upper()} a {v}")
+                        st.write("---")
+                        st.write("**Acción prioritaria:**")
+                        st.write(f"- {rec['accion']}")
+
     else:
         if not (-1 <= pmv_final <= 1):
-            st.warning("No se encontraron ajustes adecuados. Considere modificar otros parámetros.")
+            st.warning(
+                "⚠️ No se encontraron ajustes adecuados. Considere modificar otros parámetros o implementar soluciones estructurales.")
         else:
-            st.success(
-                "¡No se requieren ajustes adicionales! Las condiciones actuales están dentro del rango de confort.")
+            st.success("✅ ¡Condiciones óptimas! No se requieren ajustes adicionales.")
 
     # Mostrar progreso detallado
     with st.expander("Ver detalles del proceso de ajuste"):
