@@ -143,6 +143,12 @@ def main():
             st.success("Formulario 1 guardado.")
 
         # 3. Formulario 2: Mediciones de Áreas
+
+
+        #NOTA PARA DeepSeek
+        # En esta parte requiero que cada una de las áreas funcione como un formulario por separado, pero que su información se almacene sobre la misma tabla.
+        # NOTA PARA DeepSeek
+
         st.subheader("Mediciones de Áreas")
         areas_data = []
         with st.form("form2"):

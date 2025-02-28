@@ -79,3 +79,10 @@ def get_equipos() -> pd.DataFrame:
     connection.close()
     return df
 
+def get_all_cuvs_with_visits():
+    """Obtiene todos los CUV únicos que tienen visitas registradas."""
+    connection = get_db_connection()
+    query = "SELECT DISTINCT cuv_visita FROM higiene_Visitas"
+    df = pd.read_sql(query, connection)
+    connection.close()
+    return df['cuv_visita'].tolist()

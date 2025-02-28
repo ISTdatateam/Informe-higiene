@@ -20,6 +20,60 @@ logging.basicConfig(level=logging.DEBUG)
 
 
 # -----------------------------------------------
+# Nuevas funciones
+# -----------------------------------------------
+
+
+def calcular_analisis_area(group):
+    """Determina si un área cumple o no basado en mediciones."""
+    if len(group) > 1:
+        # Cálculo de promedios
+        avg_t_bul = group["t_bul_seco"].astype(float).mean()
+        avg_t_globo = group["t_globo"].astype(float).mean()
+        avg_hum = group["hum_rel"].astype(float).mean()
+        avg_vel = group["vel_air"].astype(float).mean()
+        avg_met = group["met"].astype(float).mean() or 1.1
+        avg_clo = group["clo"].astype(float).mean() or 0.5
+
+        # Cálculo PMV/PPD
+        try:
+            results = pmv_ppd_iso(
+                tdb=avg_t_bul,
+                tr=avg_t_globo,
+                vr=avg_vel,
+                rh=avg_hum,
+                met=avg_met,
+                clo=avg_clo,
+                model="7730-2005",
+                limit_inputs=False
+            )
+            pmv = results.pmv if hasattr(results, 'pmv') else results.get('pmv', 0)
+            analisis = interpret_pmv(pmv)
+        except Exception:
+            analisis = "NO CUMPLE"
+    else:
+        analisis = group.iloc[0].get("resultado_medicion", "NO CUMPLE").upper()
+
+    return analisis
+
+
+def procesar_areas(df_mediciones):
+    """Procesa todas las áreas para determinar cumplimiento."""
+    areas_cumplen = []
+    areas_no_cumplen = []
+
+    if not df_mediciones.empty:
+        grouped = df_mediciones.groupby("nombre_area")
+        for area, group in grouped:
+            analisis = calcular_analisis_area(group)
+            if analisis == "CUMPLE":
+                areas_cumplen.append(area)
+            else:
+                areas_no_cumplen.append(area)
+    return areas_cumplen, areas_no_cumplen
+
+
+# -----------------------------------------------
 # FUNCIONES AUXILIARES PARA EL DOCUMENTO WORD
 # -----------------------------------------------
 
@@ -55,9 +109,6 @@ def format_columns(df, columns, mode="title"):
             else:
                 raise ValueError(f"Modo '{mode}' no reconocido. Use 'title', 'capitalize' o 'upper'.")
     return df
-
-
-
 
 
 def set_column_width(table, col_index, width):
@@ -141,7 +192,6 @@ def join_with_and(items):
         return ", ".join(items[:-1]) + " y " + items[-1]
 
 
-
 def get_or_add_lang(rPr):
     """
     Obtiene o agrega el elemento de idioma en la configuración de la fuente.
@@ -185,6 +235,7 @@ def descargar_imagen_gdrive(url_foto: str) -> BytesIO or None:
 # -----------------------------------------------------
 # NUEVAS FUNCIONES PARA CONFIGURAR ESTILOS DE MANERA MODULAR
 # -----------------------------------------------------
+
 def set_style_language(style, lang_code="es-CL"):
     """
     Asigna el código de idioma a un estilo dado.
@@ -375,17 +426,32 @@ def add_row(table, label, value="", first=False):
             format_row(row)
 
 
+def agregar_contenido(cell, items):
+    """
+    Agrega cada elemento de 'items' a la celda como párrafo y, posteriormente,
+    elimina el primer párrafo si está vacío y limpia la celda para eliminar
+    espacios y saltos de línea extra, de modo que solo se conserven los párrafos
+    con contenido.
+    """
+    # 1) Agregar cada elemento como párrafo
+    for item in items:
+        cell.add_paragraph(item)
+
+    if cell.paragraphs:
+        parrafo_a_eliminar = cell.paragraphs[0]
+        # Accede al elemento XML y elimínalo del padre
+        p_element = parrafo_a_eliminar._element
+        p_element.getparent().remove(p_element)
+
 
 ####
 # Añade al final de doc_utils.py
 
-def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_final, tr_final):
+def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
     recomendaciones = []
 
     # Calcular diferencias térmicas importantes
     dif_temp = tr_initial - tdb_initial
-    exceso_tdb = tdb_initial - tdb_final > 1
-    exceso_tr = tr_initial - tr_final > 1
 
     # 1. Estrategias principales según condición térmica
     estrategias_base = []
@@ -397,33 +463,33 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
                 'tipo': 'enfriamiento',
                 'mensaje': "Refrigeración activa requerida",
                 'acciones': [
-                    "Adquirir enfriadores portátiles (1-2 por área)",
-                    "Coordinar protocolos de recarga con proveedores",
-                    "Instalar sistemas HVAC en áreas críticas"
+                    "- Implementar [__] equipos enfriadores de aire (según las dimensiones de las áreas), con el fin de enfriar el aire.",
+                    "- Consultar con el proveedor el óptimo uso del equipo por ejemplo: periodicidad de suministrar agua helada, hielo o implemento refrigerante autorizado para el equipamiento adquirido, con el fin de estar constantemente enfriando durante toda la jornada laboral el área, especialmente en periodo de mayor temperaturas o época estival.",
+                    "- Llevar una Bitácora o Registro de la actividad en lo referido al uso de enfriador(es)."
                 ],
-                'plazo': '3-6 meses'
+                'plazo': '6 meses desde la recepción del presente informe técnico'
             },
             {
                 'condicion': dif_temp > 2.0,
                 'tipo': 'aislamiento',
                 'mensaje': "Reducción de carga térmica",
                 'acciones': [
-                    "Instalar materiales aislantes en techos/paredes",
-                    "Implementar protecciones solares reflectivas",
-                    "Aislar fuentes de calor radiante"
+                    "- (REVISAR SI CORRESPONDE) Instalar materiales aislantes en techos/paredes",
+                    "- (REVISAR SI CORRESPONDE) Implementar protecciones solares reflectivas",
+                    "- (REVISAR SI CORRESPONDE) Aislar fuentes de calor radiante"
                 ],
-                'plazo': '3 meses'
+                'plazo': '3 meses desde la recepción del presente informe técnico'
             },
             {
                 'condicion': vr < 0.2,
                 'tipo': 'ventilacion',
-                'mensaje': f"VR actual: {vr} m/s - Aumentar ventilación",
+                'mensaje': f"Aumentar ventilación",
                 'acciones': [
-                    "Instalar ventiladores (mínimo 2 por área)",
-                    "Implementar sistemas de extracción forzada",
-                    "Optimizar ventilación cruzada"
+                    "- Implementar [__] ventiladores industriales, con el fin de generar corrientes de aire, las cuales ayudarán a mejorar condiciones de confort térmico en dicha área.",
+                    "- (REVISAR SI CORRESPONDE) Implementar sistemas de extracción forzada",
+                    "- (REVISAR SI CORRESPONDE) Optimizar ventilación cruzada"
                 ],
-                'plazo': '3 meses'
+                'plazo': '3 meses desde la recepción del presente informe técnico'
             }
         ]
     elif pmv < -1.0:  # Ambiente frío
@@ -433,11 +499,11 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
                 'tipo': 'calefaccion',
                 'mensaje': "Protección contra el frío",
                 'acciones': [
-                    "Implementar sistemas de calefacción radiante",
-                    "Mejorar aislamiento térmico en envolvente",
-                    "Optimizar sellado de infiltraciones"
+                    "- (REVISAR SI CORRESPONDE) Implementar sistemas de calefacción radiante",
+                    "- (REVISAR SI CORRESPONDE) Mejorar aislamiento térmico en envolvente",
+                    "- (REVISAR SI CORRESPONDE) Optimizar sellado de infiltraciones"
                 ],
-                'plazo': '3 meses'
+                'plazo': '3 meses desde la recepción del presente informe técnico'
             }
         ]
 
@@ -446,13 +512,14 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
         if estrategia['condicion']:
             recomendaciones.append({
                 'tipo': estrategia['tipo'],
-                'categoria': 'Estrategia Principal',
-                'nivel': 'Prioridad 2',
+                'categoria': estrategia['mensaje'],
+                'nivel': 'Prioridad 1',
                 'mensaje': estrategia['mensaje'],
                 'acciones': estrategia.get('acciones', []),
                 'plazo': estrategia.get('plazo', 'Inmediato')
             })
 
+    '''
     # 2. Mantenimiento (siempre aplica)
     mantenimiento = {
         'preventivo': [
@@ -470,11 +537,10 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
             "Monitoreo continuo de parámetros ambientales"
         ]
     }
-
     recomendaciones.append({
         'tipo': 'mantenimiento',
         'categoria': 'Gestión Técnica',
-        'nivel': 'Prioridad 3',
+        'nivel': 'Prioridad 2',
         'mensaje': "Programa de mantenimiento integral",
         'acciones': mantenimiento,
         'plazo': 'Continuo'
@@ -489,16 +555,17 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo, tdb_
             "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°44)",
             "Establecer registros firmados de capacitación"
         ],
-        'plazo': '30 días'
+        'plazo': '30 días desde la recepción del presente informe técnico'
     })
+    '''
 
     return recomendaciones
 
 def crear_tabla_recomendaciones(doc, tipo_medida, medidas):
     """Crea tabla de recomendaciones por tipo de medida"""
     # Configurar encabezados según el tipo
-    headers = ["Ámbito", "Tipo de Medida", "Acciones", "Plazo"]
-    col_widths = [Cm(3), Cm(3.5), Cm(8), Cm(2.5)]
+    headers = ["Área", "Acción correctiva", "Prescripción de medidas", "Plazo"]
+    col_widths = [Cm(2), Cm(2), Cm(12), Cm(2)]
 
     # Crear tabla
     table = doc.add_table(rows=1, cols=4)
@@ -517,9 +584,9 @@ def crear_tabla_recomendaciones(doc, tipo_medida, medidas):
     # Llenar con medidas
     for medida in medidas:
         row_cells = table.add_row().cells
-        row_cells[0].text = "\n".join(medida['areas'])
+        agregar_contenido(row_cells[0],medida['areas'])
         row_cells[1].text = medida['tipo_medida']
-        row_cells[2].text = "\n".join([f"• {a}" for a in medida['acciones']])
+        agregar_contenido(row_cells[2], medida['acciones'])
         row_cells[3].text = medida['plazo']
 
         # Formato vertical centrado
@@ -541,8 +608,42 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
                 'rh': grupo['hum_rel'].mean(),
                 'met': grupo['met'].mean(),
                 'clo': grupo['clo'].mean(),
-                'pmv': grupo['pmv'].mean()
             }
+
+            try:
+                results = pmv_ppd_iso(
+                    tdb=avg_params['tdb'],
+                    tr=avg_params['tr'],
+                    vr=avg_params['vr'],
+                    rh=avg_params['rh'],
+                    met=avg_params['met'],
+                    clo=avg_params['clo'],
+                    model="7730-2005",
+                    limit_inputs=False,
+                    round_output=True
+                )
+            except Exception as e:
+                logging.error("Error al calcular pmv_ppd_iso para el área %s: %s", area, e)
+                results = None
+
+            if results is not None:
+                if isinstance(results, dict):
+                    avg_ppd = float(results.get("ppd", 0))
+                    avg_pmv = float(results.get("pmv", 0))
+                elif hasattr(results, "ppd") and hasattr(results, "pmv"):
+                    avg_ppd = float(results.ppd)
+                    avg_pmv = float(results.pmv)
+                else:
+                    avg_ppd = 0
+                    avg_pmv = 0
+            else:
+                avg_ppd = 0
+                avg_pmv = 0
+
+            avg_params.update({
+                'pmv': avg_pmv,
+                'ppd':avg_ppd
+            })
 
             recs = generar_recomendaciones(
                 pmv=avg_params['pmv'],
@@ -551,13 +652,11 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
                 vr=avg_params['vr'],
                 rh=avg_params['rh'],
                 met=avg_params['met'],
-                clo=avg_params['clo'],
-                tdb_final=avg_params['tdb'] - 2 if avg_params['pmv'] > 1 else avg_params['tdb'] + 2,
-                tr_final=avg_params['tr'] - 1.5 if avg_params['pmv'] > 1 else avg_params['tr'] + 1.5
+                clo=avg_params['clo']
             )
 
             for rec in recs:
-                if rec['tipo'] in ['ventilacion', 'enfriamiento', 'aislamiento']:
+                if rec['tipo'] in ['ventilacion', 'enfriamiento', 'aislamiento', 'calefaccion']:
                     medidas_ingenieriles.append({
                         'tipo_medida': rec['categoria'],
                         'areas': [area],
@@ -571,18 +670,19 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
             'tipo_medida': 'Comunicación',
             'areas': ['Todas'],
             'acciones': [
-                "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°44)",
-                "Establecer registros firmados de capacitación"
+                "- Informar a cada persona trabajadora acerca de los riesgos que entrañan sus labores, de las medidas preventivas, de los métodos y/o procedimientos de trabajo correctos, acorde a lo identificado por la empresa. Además de lo señalado previamente, la entidad empleadora deberá informar de manera oportuna y adecuada el resultado del presente informe técnico.",
+                "- Complementario a lo anterior, se deberán realizar capacitaciones (teóricas/prácticas) periódicas en prevención de riesgos laborales, con la finalidad de garantizar el aprendizaje efectivo y eficaz, dejando registro de dichas capacitaciones y evaluaciones.",
+                "- Lo señalado previamente se enmarca en los artículos 15° y 16° del Párrafo IV del D.S 44 “Aprueba nuevo reglamento sobre gestión preventiva de los riesgos laborales para un entorno de trabajo seguro y saludable."
             ],
-            'plazo': '30 días'
+            'plazo': '30 días desde la recepción del presente informe técnico'
         },
         {
             'tipo_medida': 'Mantenimiento',
             'areas': areas_no_cumplen if areas_no_cumplen else ['Todas'],
             'acciones': [
-                "Preventivo: Programar mantención periódica de equipos",
-                "Correctivo: Reparación de sistemas de climatización",
-                "Control: Monitoreo continuo de parámetros ambientales"
+                "- Realizar mantención preventiva en los equipos de climatización, con el fin de identificar desgastes y prevenir fallas. Se debe seguir un cronograma establecido y registrar cada intervención.",
+                "- Ejecutar reparaciones en equipos de climatización al detectar fallas en su funcionamiento, restableciendo su operatividad de manera oportuna y registrando las acciones realizadas",
+                "- Implementar un monitoreo continuo de los parámetros de confort térmico entre 23 a 26°C en verano y 18 a 21 en invierno, manteniendo un registro sistemático de las mediciones y ajustes efectuados"
             ],
             'plazo': 'Continuo'
         }
@@ -597,6 +697,16 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
 
     doc.add_heading("Medidas de Carácter Administrativo", level=2)
     crear_tabla_recomendaciones(doc, "Administrativa", medidas_administrativas)
+
+# Función para generar texto de áreas cumplen/no cumplen
+def generar_texto_areas(areas, tipo):
+    if not areas:
+        return ""
+    areas_formateadas = join_with_and(areas)
+    if tipo == "cumplen":
+        return f"las áreas {areas_formateadas} cumplen con el estándar de confort térmico"
+    else:
+        return f"las áreas {areas_formateadas} no cumplen con el estándar"
 
 ######
 
@@ -661,16 +771,46 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     else:
         add_row(table_inicial, "Información de empresa/centro", "No se encontró información para este CUV.")
 
+
+    # Procesar áreas antes del resumen
+    areas_cumplen, areas_no_cumplen = procesar_areas(df_mediciones)
+
     # Encabezado principal del contenido: Resumen
     doc.add_paragraph()
     paragraph = doc.add_heading("Resumen", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
     if not df_visitas.empty:
-        # Se agregan dos párrafos de resumen fijos (ejemplo)
-        doc.add_paragraph(
-            "Efectuadas mediciones de confort térmico en el local 'Nombre de Local', es posible concluir que las áreas de 'Area o sector' cumplen con el estándar de confort térmico, por lo que se debe mantener las condiciones actuales o similares.")
-        doc.add_paragraph(
-            "Respecto de las áreas que no cumplen con el estándar, se deben adoptar las medidas prescritas detalladas en la tabla 2 para su solución.")
+        nombre_ct = df_centros.iloc[0].get("nombre_ct", "") if not df_centros.empty else ""
+
+        texto_base = f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, "
+
+        # Escenario 1: Todas cumplen
+        if areas_cumplen and not areas_no_cumplen:
+            texto = texto_base + generar_texto_areas(areas_cumplen, "cumplen") + (
+                ", por lo que se debe mantener las condiciones actuales o similares."
+            )
+            doc.add_paragraph(texto)
+
+        # Escenario 2: Algunas cumplen, otras no
+        elif areas_cumplen and areas_no_cumplen:
+            texto_cumplen = generar_texto_areas(areas_cumplen, "cumplen")
+            texto_no_cumplen = generar_texto_areas(areas_no_cumplen, "no_cumplen")
+
+            doc.add_paragraph(texto_base + f"es posible concluir que {texto_cumplen}.")
+            doc.add_paragraph(
+                f"Respecto de {texto_no_cumplen}, se deben adoptar las medidas prescritas para su solución.")
+
+        # Escenario 3: Ninguna cumple
+        elif areas_no_cumplen and not areas_cumplen:
+            texto = texto_base + generar_texto_areas(areas_no_cumplen, "no_cumplen") + (
+                ", por lo que se deben adoptar las medidas prescritas para su solución."
+            )
+            doc.add_paragraph(texto)
+
+        else:
+            doc.add_paragraph("No se encontraron áreas evaluadas para generar un resumen.")
+
 
     # -------------------------------
     # 2) ANTECEDENTES DE LA ACTIVIDAD
@@ -700,8 +840,10 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         consultor_ist = row_visita.get("consultor_ist", "")
         doc.add_paragraph(
             f"A solicitud de {razon_social}, se realiza una evaluación de confort térmico en el centro {nombre_ct}, ubicado en {direccion_completa}.")
+        doc.add_paragraph()
         doc.add_paragraph(
             f"La visita se realizó el día {fecha_visita} a las {hora_visita} por el consultor de IST {consultor_ist} acompañado por {personal_visita} ({cargo_visita}).")
+        doc.add_paragraph()
         # --- Agregar áreas evaluadas ---
         if not df_mediciones.empty:
             areas = df_mediciones["nombre_area"].unique()
@@ -740,9 +882,11 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             equipo_vel_text = equipo_vel_cod
         doc.add_paragraph(
             f"Las condiciones del centro de trabajo se midieron utilizando los equipos {equipo_temp_text} y {equipo_vel_text}.")
+        doc.add_paragraph()
     # --- FIN DE AGREGAR ---
     doc.add_paragraph(
         "La medición se realizó utilizando la metodología de FANGER para evaluación de confort térmico en espacios interiores de acuerdo a la Nota técnica N°47 del Instituto de Salud Pública.")
+    doc.add_paragraph()
     doc.add_paragraph(
         "Se utiliza el estándar de vestimenta y tasa de actividad metabólica detalladas en la siguiente lista:")
     # Verificar que existan mediciones
@@ -1035,12 +1179,12 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     paragraph = doc.add_heading("Vigencia del informe", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
     if not df_visitas.empty:
-        # Se agregan dos párrafos de resumen fijos (ejemplo)
-        doc.add_paragraph(
-            "El presente informe tiene una vigencia de 3 años, en la medida que no cambien las condiciones.")
-        doc.add_paragraph(
-            "Estos resultados de evaluación representan las condiciones existentes del ambiente y lugar de trabajo al momento de realizar las mediciones."
-        )
+        doc.add_paragraph("En términos generales, el presente informe tiene validez de 3 años, a excepción que existan cambios en la situación, del tipo ingenieril o administrativo, que presupongan modificación a las condiciones encontradas al momento de la medición, lo cual implicará realizar una nueva evaluación en un plazo menor al señalado.")
+        doc.add_paragraph()
+        if len(areas_no_cumplen) > 0:
+            doc.add_paragraph("Cuando se concreten los cambios indicados, la empresa deberá informar al IST el detalle de los mismos, de forma tal de programar las gestiones a realizar, las que considerarán previamente un informe de Verificación y Control y posteriormente, de acuerdo a sus resultados, la nueva evaluación de higiene ocupacional correspondiente.")
+            doc.add_paragraph()
+        doc.add_paragraph("Estos resultados de evaluación representan las condiciones existentes del ambiente y lugar de trabajo al momento de realizar las mediciones.")
     doc.add_paragraph()
 
     # -------------------------------
@@ -1128,6 +1272,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     doc.save(buffer)
     buffer.seek(0)
     return buffer
+
 
 # -----------------------------------------------
 # FUNCIÓN PRINCIPAL (OPCIONAL) PARA GENERAR EL INFORME
