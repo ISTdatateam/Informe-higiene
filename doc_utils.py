@@ -328,6 +328,28 @@ style_configurations = {
         "space_after": Pt(0),
         "alignment": WD_ALIGN_PARAGRAPH.LEFT,
         "lang_code": "es-CL"
+    },
+    "Centrado": {
+        "font_name": "Calibri",
+        "font_size": Pt(10),
+        "font_color": RGBColor(0, 0, 0),
+        "bold": False,
+        "italic": False,
+        "space_before": Pt(0),
+        "space_after": Pt(0),
+        "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+        "lang_code": "es-CL"
+    },
+    "Centrado Bold": {
+        "font_name": "Calibri",
+        "font_size": Pt(10),
+        "font_color": RGBColor(0, 0, 0),
+        "bold": True,
+        "italic": False,
+        "space_before": Pt(0),
+        "space_after": Pt(0),
+        "alignment": WD_ALIGN_PARAGRAPH.CENTER,
+        "lang_code": "es-CL"
     }
 }
 
@@ -492,6 +514,12 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
                 'plazo': '3 meses desde la recepción del presente informe técnico'
             }
         ]
+    '''
+    #NOTA:
+    #Se desactivan las recomendaciones por frio, dado que el foco de las evaluaciones son por calor en esta temporada.
+    #NOTA
+    
+    
     elif pmv < -1.0:  # Ambiente frío
         estrategias_base = [
             {
@@ -506,6 +534,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
                 'plazo': '3 meses desde la recepción del presente informe técnico'
             }
         ]
+    '''
 
     # Filtrar y agregar estrategias válidas
     for estrategia in estrategias_base:
@@ -780,37 +809,68 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     paragraph = doc.add_heading("Resumen", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    if not df_visitas.empty:
-        nombre_ct = df_centros.iloc[0].get("nombre_ct", "") if not df_centros.empty else ""
+    def generar_texto_areas(areas, condicion):
+        """
+        Genera el texto correspondiente a las áreas evaluadas según la condición recibida.
+        Si 'condicion' contiene la palabra 'no', se genera un mensaje para áreas que no cumplen.
+        """
+        areas_str = ", ".join(areas)
+        if "no" in condicion.lower():
+            if len(areas) == 1:
+                return f"el área de {areas_str} NO cumple con el estándar de confort térmico"
+            else:
+                return f"las áreas {areas_str}, éstas NO cumplen con el estándar confort térmico"
+        else:
+            if len(areas) == 1:
+                return f"el área de {areas_str} cumple con el estándar confort térmico"
+            else:
+                return f"las áreas {areas_str}, éstas cumplen con el estándar confort térmico"
 
+    if not df_visitas.empty:
+
+        nombre_ct = df_centros.iloc[0].get("nombre_ct", "") if not df_centros.empty else ""
         texto_base = f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, "
 
         # Escenario 1: Todas cumplen
         if areas_cumplen and not areas_no_cumplen:
-            texto = texto_base + generar_texto_areas(areas_cumplen, "cumplen") + (
-                ", por lo que se debe mantener las condiciones actuales o similares."
+            forma_cumple = "cumple" if len(areas_cumplen) == 1 else "cumplen"
+            texto_areas = generar_texto_areas(areas_cumplen, forma_cumple)
+            connector = (
+                ", por lo que se debe mantener la condición actual o similar."
+                if len(areas_cumplen) == 1
+                else ", por lo que se deben mantener las condiciones actuales o similares."
             )
-            doc.add_paragraph(texto)
+            doc.add_paragraph(texto_base + texto_areas + connector)
 
         # Escenario 2: Algunas cumplen, otras no
         elif areas_cumplen and areas_no_cumplen:
-            texto_cumplen = generar_texto_areas(areas_cumplen, "cumplen")
-            texto_no_cumplen = generar_texto_areas(areas_no_cumplen, "no_cumplen")
+            forma_cumple = "cumple" if len(areas_cumplen) == 1 else "cumplen"
+            forma_no_cumple = "no cumple" if len(areas_no_cumplen) == 1 else "no cumplen"
+            texto_cumplen = generar_texto_areas(areas_cumplen, forma_cumple)
+            texto_no_cumplen = generar_texto_areas(areas_no_cumplen, forma_no_cumple)
 
-            doc.add_paragraph(texto_base + f"es posible concluir que {texto_cumplen}.")
-            doc.add_paragraph(
-                f"Respecto de {texto_no_cumplen}, se deben adoptar las medidas prescritas para su solución.")
+            texto_conclusion = texto_base + f"es posible concluir que {texto_cumplen}."
+            connector_medidas = (
+                f"Respecto de {texto_no_cumplen}, se debe adoptar la medida prescrita para su solución."
+                if len(areas_no_cumplen) == 1
+                else f"Respecto de {texto_no_cumplen}, se deben adoptar las medidas prescritas para su solución."
+            )
+            doc.add_paragraph(texto_conclusion)
+            doc.add_paragraph(connector_medidas)
 
         # Escenario 3: Ninguna cumple
         elif areas_no_cumplen and not areas_cumplen:
-            texto = texto_base + generar_texto_areas(areas_no_cumplen, "no_cumplen") + (
-                ", por lo que se deben adoptar las medidas prescritas para su solución."
+            forma_no_cumple = "no cumple" if len(areas_no_cumplen) == 1 else "no cumplen"
+            texto_areas = generar_texto_areas(areas_no_cumplen, forma_no_cumple)
+            connector = (
+                ", por lo que se debe adoptar la medida prescrita para su solución."
+                if len(areas_no_cumplen) == 1
+                else ", por lo que se deben adoptar las medidas prescritas para su solución."
             )
-            doc.add_paragraph(texto)
+            doc.add_paragraph(texto_base + texto_areas + connector)
 
         else:
             doc.add_paragraph("No se encontraron áreas evaluadas para generar un resumen.")
-
 
     # -------------------------------
     # 2) ANTECEDENTES DE LA ACTIVIDAD
@@ -838,11 +898,12 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         personal_visita = row_visita.get("nombre_personal_visita", "")
         cargo_visita = row_visita.get("cargo_personal_visita", "")
         consultor_ist = row_visita.get("consultor_ist", "")
+        temperatura = row_visita.get("temperatura_dia","")
         doc.add_paragraph(
-            f"A solicitud de {razon_social}, se realiza una evaluación de confort térmico en el centro {nombre_ct}, ubicado en {direccion_completa}.")
+            f"A solicitud de {razon_social} se realizó una evaluación de confort térmico en el centro de trabajo {nombre_ct}, ubicado en {direccion_completa}.")
         doc.add_paragraph()
         doc.add_paragraph(
-            f"La visita se realizó el día {fecha_visita} a las {hora_visita} por el consultor de IST {consultor_ist} acompañado por {personal_visita} ({cargo_visita}).")
+            f"La visita se efectuó el {fecha_visita} a las {hora_visita} a cargo de {consultor_ist}, profesional consultor/a de IST. En representación de la empresa adherente la visita contó con la participación de {personal_visita} ({cargo_visita}). Cabe destacar que la temperatura máxima registrada durante la jornada fue de {temperatura}°C.")
         doc.add_paragraph()
         # --- Agregar áreas evaluadas ---
         if not df_mediciones.empty:
@@ -1121,7 +1182,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         if areas_cumplen:
             if len(areas_cumplen) == 1:
                 # Forma singular
-                cumplen_text = f"el área {areas_cumplen[0]}"
+                cumplen_text = f"el área de {areas_cumplen[0]}"
             else:
                 # Forma plural, usando la función para unir con "y"
                 cumplen_text = f"las áreas {join_with_and(areas_cumplen)}"
@@ -1141,10 +1202,10 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             # Caso 2: Existen áreas que cumplen y áreas que no cumplen.
             doc.add_paragraph(
                 f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, es posible concluir que {cumplen_text} "
-                f"cumplen con el estándar de confort térmico, por lo que se recomienda mantener las condiciones actuales o similares."
+                f"{'cumple' if len(areas_cumplen) == 1 else 'cumplen'} con el estándar de confort térmico, por lo que se recomienda mantener las condiciones actuales o similares."
             )
             doc.add_paragraph(
-                f"Respecto a {no_cumplen_text} que no cumplen con el estándar, se deben adoptar las medidas prescritas para corregir las condiciones."
+                f"Respecto a {no_cumplen_text} que NO {'cumple' if len(areas_no_cumplen) == 1 else 'cumplen'} con el estándar, se deben adoptar las medidas prescritas a continuación para corregir las condiciones."
             )
         elif cumplen_text and not no_cumplen_text:
             # Caso 1: Sólo existen áreas que cumplen.
@@ -1156,7 +1217,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             # Caso 3: Sólo existen áreas que no cumplen.
             doc.add_paragraph(
                 f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {no_cumplen_text} "
-                f"{'no cumple' if len(areas_no_cumplen) == 1 else 'no cumplen'} con el estándar de confort térmico, por lo que se deben adoptar las medidas prescritas para corregir las condiciones."
+                f"{'NO cumple' if len(areas_no_cumplen) == 1 else 'NO cumplen'} con el estándar de confort térmico, por lo que se deben adoptar las medidas prescritas a continuación para corregir las condiciones."
             )
         else:
             # En caso de que no haya información suficiente
@@ -1186,6 +1247,31 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             doc.add_paragraph()
         doc.add_paragraph("Estos resultados de evaluación representan las condiciones existentes del ambiente y lugar de trabajo al momento de realizar las mediciones.")
     doc.add_paragraph()
+    doc.add_paragraph()
+    doc.add_paragraph()
+    doc.add_paragraph()
+    doc.add_paragraph()
+
+    if not df_visitas.empty:
+        row_visita = df_visitas.iloc[0]
+        consultor_ist = row_visita.get("consultor_ist", "")
+
+    # Agregar párrafo para el consultor, centrado y en negrita
+    p_consultor = doc.add_paragraph()
+    p_consultor.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_consultor = p_consultor.add_run(consultor_ist)
+    run_consultor.bold = True
+
+    # Agregar párrafo para la profesión, centrado
+    p_profesion = doc.add_paragraph("[__COMPLETAR_PROFESIÓN__]")
+    p_profesion.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # Agregar párrafo para el zonal, centrado
+    p_zonal = doc.add_paragraph("[__COMPLETAR_ZONAL__]")
+    p_zonal.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+
+
 
     # -------------------------------
     # 6) ANEXOS
@@ -1264,6 +1350,90 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     set_column_width(table_calib, 0, Cm(4))
     set_column_width(table_calib, 1, Cm(14))
 
+    ##########################
+    #Observaciones de áreas
+    ##########################
+
+    doc.add_page_break()
+    doc.add_heading("Características de las areas evaluadas", level=2)
+
+    # Crear la tabla con 3 columnas: Área, Características constructivas y Condiciones de ventilación
+    tabla_caract = doc.add_table(rows=1, cols=3)
+    tabla_caract.style = 'Table Grid'
+
+    # Agregar la fila de encabezado
+    hdr_cells = tabla_caract.rows[0].cells
+    hdr_cells[0].text = "Área"
+    hdr_cells[1].text = "Características constructivas"
+    hdr_cells[2].text = "Condiciones de ventilación"
+
+    # Agrupar el DataFrame por "nombre_area"
+    grouped = df_mediciones.groupby("nombre_area")
+    for area, group in grouped:
+        # Usar el primer registro del grupo para extraer los datos de instalación
+        registro = group.iloc[0]
+
+        # Agregar una fila para el área con sus respectivos datos
+        row_cells = tabla_caract.add_row().cells
+        row_cells[0].text = area
+        row_cells[1].text = str(registro["caract_constructivas"])
+        row_cells[2].text = str(registro["ingreso_salida_aire"])
+
+    set_column_width(tabla_caract, 0, Cm(2.5))
+    set_column_width(tabla_caract, 1, Cm(7))
+    set_column_width(tabla_caract, 2, Cm(7))
+    format_row(tabla_caract.rows[0])
+
+
+
+    '''
+    # Agrupar el DataFrame por "nombre_area"
+    grouped = df_mediciones.groupby("nombre_area")
+    for area, group in grouped:
+        # Agregar un título para el área
+        doc.add_paragraph(f"Área: {area}", style='Heading2')
+
+        # Usar el primer registro del grupo para extraer los datos de instalación
+        registro = group.iloc[0]
+
+        # Definir los pares (etiqueta, valor) a mostrar
+        campos = [
+            ("cond_techumbre", registro["cond_techumbre"]),
+            ("obs_techumbre", registro["obs_techumbre"]),
+            ("cond_paredes", registro["cond_paredes"]),
+            ("obs_paredes", registro["obs_paredes"]),
+            ("cond_vantanal", registro["cond_vantanal"]),
+            ("obs_ventanal", registro["obs_ventanal"]),
+            ("cond_aire_acond", registro["cond_aire_acond"]),
+            ("obs_aire_acond", registro["obs_aire_acond"]),
+            ("cond_ventiladores", registro["cond_ventiladores"]),
+            ("obs_ventiladores", registro["obs_ventiladores"]),
+            ("cond_inyeccion_extraccion", registro["cond_inyeccion_extraccion"]),
+            ("obs_inyeccion_extraccion", registro["obs_inyeccion_extraccion"]),
+            ("cond_ventanas", registro["cond_ventanas"]),
+            ("obs_ventanas", registro["obs_ventanas"]),
+            ("cond_puertas", registro["cond_puertas"]),
+            ("obs_puertas", registro["obs_puertas"]),
+            ("cond_otras", registro["cond_otras"]),
+            ("obs_otras", registro["obs_otras"])
+        ]
+
+        # Crear la tabla con 2 columnas; la cantidad de filas es 1 (opcional, para encabezado) + len(campos)
+        tabla_instalacion = doc.add_table(rows=1, cols=2)
+        tabla_instalacion.style = 'Table Grid'
+
+        # Opcional: agregar una fila de encabezado para identificar las columnas
+        hdr_cells = tabla_instalacion.rows[0].cells
+        hdr_cells[0].text = "Etiqueta"
+        hdr_cells[1].text = "Contenido"
+
+        # Agregar una fila por cada campo con su etiqueta y valor
+        for etiqueta, valor in campos:
+            row_cells = tabla_instalacion.add_row().cells
+            row_cells[0].text = etiqueta
+            row_cells[1].text = str(valor)
+
+    '''
 
     # -------------------------------
     # Finaliza el documento y lo retorna como BytesIO
