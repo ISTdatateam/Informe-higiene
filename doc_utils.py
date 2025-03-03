@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import logging
 import re
-import requests
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor, Cm
 from docx.oxml import parse_xml, OxmlElement
@@ -11,8 +10,13 @@ import qrcode
 from PIL import ImageOps  # Asegúrate de tener Pillow instalado
 from io import BytesIO
 from docx.oxml.ns import qn
-from datetime import datetime
 from docx.enum.table import WD_ALIGN_VERTICAL
+from pdf2image import convert_from_path
+import requests
+import os
+from natsort import natsorted
+from collections import OrderedDict
+
 
 # Configuración básica del logging
 # logging.basicConfig(level=logging.INFO)
@@ -204,13 +208,25 @@ def get_or_add_lang(rPr):
 
 
 def interpret_pmv(pmv_value):
+    """Ejemplo de interpretación simple:
+       - CUMPLE si -1 <= pmv <= 1
+       - NO CUMPLE en caso contrario.
+       Ajusta según tu criterio."""
+    if pmv_value <= -1 or pmv_value >= 1:
+        return "NO CUMPLE"
+    else:
+        return "CUMPLE"
+
+
+'''
+def interpret_pmv(pmv_value):
     if pmv_value >= 1:
         return "NO CUMPLE"
     elif pmv_value > -1:
         return "CUMPLE"
     else:
         return "NO CUMPLE"
-
+'''
 
 def descargar_imagen_gdrive(url_foto: str) -> BytesIO or None:
     """
@@ -359,8 +375,8 @@ def look_informe(doc: Document):
     Configura el documento: establece orientación, márgenes, estilos y el idioma.
     """
     for section in doc.sections:
-        section.top_margin = Cm(2)
-        section.bottom_margin = Cm(1)
+        section.top_margin = Cm(2.5)
+        section.bottom_margin = Cm(1.5)
         section.left_margin = Cm(2.5)
         section.right_margin = Cm(2)
 
@@ -593,11 +609,11 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
 def crear_tabla_recomendaciones(doc, tipo_medida, medidas):
     """Crea tabla de recomendaciones por tipo de medida"""
     # Configurar encabezados según el tipo
-    headers = ["Área", "Acción correctiva", "Prescripción de medidas", "Plazo"]
-    col_widths = [Cm(2), Cm(2), Cm(12), Cm(2)]
+    headers = ["Área", "Prescripción de medidas", "Plazo"]
+    col_widths = [Cm(2), Cm(14), Cm(4)]
 
     # Crear tabla
-    table = doc.add_table(rows=1, cols=4)
+    table = doc.add_table(rows=1, cols=3)
     table.style = 'Table Grid'
 
     # Configurar anchos de columna
@@ -614,14 +630,11 @@ def crear_tabla_recomendaciones(doc, tipo_medida, medidas):
     for medida in medidas:
         row_cells = table.add_row().cells
         agregar_contenido(row_cells[0],medida['areas'])
-        row_cells[1].text = medida['tipo_medida']
-        agregar_contenido(row_cells[2], medida['acciones'])
-        row_cells[3].text = medida['plazo']
-
+        agregar_contenido(row_cells[1], medida['acciones'])
+        row_cells[2].text = medida['plazo']
         # Formato vertical centrado
         for cell in row_cells:
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
-
     return table
 
 def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
@@ -687,7 +700,7 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
             for rec in recs:
                 if rec['tipo'] in ['ventilacion', 'enfriamiento', 'aislamiento', 'calefaccion']:
                     medidas_ingenieriles.append({
-                        'tipo_medida': rec['categoria'],
+                        #'tipo_medida': rec['categoria'],
                         'areas': [area],
                         'acciones': rec['acciones'],
                         'plazo': rec['plazo']
@@ -696,7 +709,7 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
     # 2. Medidas Administrativas (siempre se incluyen)
     medidas_administrativas = [
         {
-            'tipo_medida': 'Comunicación',
+            #'tipo_medida': 'Comunicación',
             'areas': ['Todas'],
             'acciones': [
                 "- Informar a cada persona trabajadora acerca de los riesgos que entrañan sus labores, de las medidas preventivas, de los métodos y/o procedimientos de trabajo correctos, acorde a lo identificado por la empresa. Además de lo señalado previamente, la entidad empleadora deberá informar de manera oportuna y adecuada el resultado del presente informe técnico.",
@@ -706,7 +719,7 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
             'plazo': '30 días desde la recepción del presente informe técnico'
         },
         {
-            'tipo_medida': 'Mantenimiento',
+            #'tipo_medida': 'Mantenimiento',
             'areas': areas_no_cumplen if areas_no_cumplen else ['Todas'],
             'acciones': [
                 "- Realizar mantención preventiva en los equipos de climatización, con el fin de identificar desgastes y prevenir fallas. Se debe seguir un cronograma establecido y registrar cada intervención.",
@@ -718,13 +731,14 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
     ]
 
     # Agregar secciones al documento
-    doc.add_heading("Medidas de Carácter Ingenieril", level=2)
+    doc.add_heading("4.1 Medidas de Carácter Ingenieril", level=3)
     if medidas_ingenieriles:
         crear_tabla_recomendaciones(doc, "Ingenieril", medidas_ingenieriles)
     else:
         doc.add_paragraph("No se requieren medidas ingenieriles para este caso.")
 
-    doc.add_heading("Medidas de Carácter Administrativo", level=2)
+    doc.add_paragraph()
+    doc.add_heading("4.2 Medidas de Carácter Administrativo", level=3)
     crear_tabla_recomendaciones(doc, "Administrativa", medidas_administrativas)
 
 # Función para generar texto de áreas cumplen/no cumplen
@@ -763,7 +777,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
 
     # Cabecera con logo
     section = doc.sections[0]
-    section.header_distance = Inches(0.5)
+    section.header_distance = Inches(0.4)
     header = section.header
     if header.paragraphs:
         paragraph = header.paragraphs[0]
@@ -771,408 +785,265 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         paragraph = header.add_paragraph()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
     run = paragraph.add_run()
-    run.add_picture('IST.jpg', width=Inches(1))
+    run.add_picture('IST.jpg', width=Cm(2))
 
-    # Título del informe
-    paragraph = doc.add_heading("INFORME EVALUACIÓN CONFORT TÉRMICO", level=1)
+    # Título del informe: se alinea a la derecha
+    titulo = doc.add_heading("INFORME EVALUACIÓN CONFORT TÉRMICO", level=1)
+    titulo.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+    # Párrafo con el código: se crea un párrafo nuevo, se añade el texto en negrita y se alinea a la derecha
+    parrafo_codigo = doc.add_paragraph()
+    run_codigo = parrafo_codigo.add_run("CODIGO: [COMPLETAR]")
+    run_codigo.bold = True
+    parrafo_codigo.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+    # A partir de aquí, el contenido se alineará a la izquierda (valor por defecto)
+    paragraph = doc.add_heading("1. Antecedentes", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    doc.add_paragraph("Por solicitud del área de prevención de la empresa, se realiza evaluación de Confort Térmico, para determinar condición en que se encuentran los trabajadores que se desempeñan en áreas o sectores de trabajo, con el fin de que la empresa pueda adoptar oportuna y eficazmente medidas que permitan mejorar las condiciones evaluadas, según corresponda.")
     doc.add_paragraph()
 
     # -------------------------------
     # 1) IDENTIFICACIÓN ACTIVIDAD
     # -------------------------------
-    table_inicial = doc.add_table(rows=0, cols=2)
-    table_inicial.style = 'Table Grid'
 
-    if not df_centros.empty:
+    if not df_centros.empty and not df_visitas.empty:
         row_centro = df_centros.iloc[0]
-        # Información de la empresa
-        add_row(table_inicial, "Información empresa")
-        add_row(table_inicial, "Razón Social", row_centro.get('razon_social', ''))
-        add_row(table_inicial, "RUT", row_centro.get('rut', ''))
-        # Información centro de trabajo
-        add_row(table_inicial, "Información centro de trabajo")
-        add_row(table_inicial, "CUV", row_centro.get('cuv', ''))
-        add_row(table_inicial, "Nombre de Local", row_centro.get('nombre_ct', ''))
-        direccion_ct = row_centro.get('direccion_ct', '')
-        comuna_ct = row_centro.get('comuna_ct', '')
-        add_row(table_inicial, "Dirección", f"{direccion_ct}, {comuna_ct}")
+        row_visita = df_visitas.iloc[0]
+
+        # Tabla 1: Información de la empresa
+        table_empresa = doc.add_table(rows=0, cols=2)
+        table_empresa.style = 'Table Grid'
+        add_row(table_empresa, "1.1 Información empresa")
+        add_row(table_empresa, "Razón Social", row_centro.get('razon_social', ''))
+        add_row(table_empresa, "RUT", row_centro.get('rut', ''))
+        add_row(table_empresa, "CIIU", row_centro.get('CIIU', '[COMPLETAR]'))
+
+        # Espacio entre tablas (opcional)
+        doc.add_paragraph()
+
+        # Tabla 2: Información centro de trabajo
+        table_centro = doc.add_table(rows=0, cols=2)
+        table_centro.style = 'Table Grid'
+        add_row(table_centro, "1.2 Información centro de trabajo")
+        add_row(table_centro, "CUV / Código IST", row_centro.get('cuv', ''))
+        add_row(table_centro, "Nombre de Local", row_centro.get('nombre_ct', ''))
+        add_row(table_centro, "Dirección", row_centro.get('direccion_ct', ''))
+        add_row(table_centro, "Comuna", row_centro.get('comuna_ct', ''))
+        add_row(table_centro, "Región", row_centro.get('region_ct', ''))
+
+        # Espacio entre tablas (opcional)
+        doc.add_paragraph()
+
+        # Tabla 3: Información de la visita
+        table_visita = doc.add_table(rows=0, cols=2)
+        table_visita.style = 'Table Grid'
+        add_row(table_visita, "1.3 Información de la visita")
+        add_row(table_visita, "Motivo de la actividad", row_visita.get('motivo_evaluacion', ''))
+        add_row(table_visita, "Fecha actividad de terreno", row_visita.get('fecha_visita', ''))
+        add_row(table_visita, "Hora actividad de terreno", row_visita.get('hora_visita', ''))
+        add_row(table_visita, "Temperatura ambiental exterior", f"{row_visita.get('temperatura_dia', '')}°C")
+        add_row(table_visita, "Fecha emisión informe", "[COMPLETAR]")
+        add_row(table_visita, "Profesional consultor/a de IST", row_visita.get('consultor_ist', ''))
+        add_row(table_visita, "Acompañante empresa", row_visita.get('nombre_personal_visita', ''))
+        add_row(table_visita, "Cargo de la persona que acompaña visita", row_visita.get('cargo_personal_visita', ''))
+        add_row(table_visita, "Revisor del informe", "[COMPLETAR]")
+        add_row(table_visita, "Jefatura responsable IST", "[COMPLETAR]")
+        add_row(table_visita, "Destinatario informe", "[COMPLETAR]")
+
     else:
-        add_row(table_inicial, "Información de empresa/centro", "No se encontró información para este CUV.")
+        # En caso de no existir información, se crea una tabla con el mensaje de error
+        table_error = doc.add_table(rows=0, cols=2)
+        add_row(table_error, "Información de empresa/centro", "No se encontró información para este CUV.")
 
-
-    # Procesar áreas antes del resumen
-    areas_cumplen, areas_no_cumplen = procesar_areas(df_mediciones)
-
-    # Encabezado principal del contenido: Resumen
-    doc.add_paragraph()
-    paragraph = doc.add_heading("Resumen", level=2)
+    # Encabezado principal del contenido: Metodología
+    paragraph = doc.add_heading("2. Metodología", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    def generar_texto_areas(areas, condicion):
-        """
-        Genera el texto correspondiente a las áreas evaluadas según la condición recibida.
-        Si 'condicion' contiene la palabra 'no', se genera un mensaje para áreas que no cumplen.
-        """
-        areas_str = ", ".join(areas)
-        if "no" in condicion.lower():
-            if len(areas) == 1:
-                return f"el área de {areas_str} NO cumple con el estándar de confort térmico"
-            else:
-                return f"las áreas {areas_str}, éstas NO cumplen con el estándar confort térmico"
-        else:
-            if len(areas) == 1:
-                return f"el área de {areas_str} cumple con el estándar confort térmico"
-            else:
-                return f"las áreas {areas_str}, éstas cumplen con el estándar confort térmico"
-
-    if not df_visitas.empty:
-
-        nombre_ct = df_centros.iloc[0].get("nombre_ct", "") if not df_centros.empty else ""
-        texto_base = f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, "
-
-        # Escenario 1: Todas cumplen
-        if areas_cumplen and not areas_no_cumplen:
-            forma_cumple = "cumple" if len(areas_cumplen) == 1 else "cumplen"
-            texto_areas = generar_texto_areas(areas_cumplen, forma_cumple)
-            connector = (
-                ", por lo que se debe mantener la condición actual o similar."
-                if len(areas_cumplen) == 1
-                else ", por lo que se deben mantener las condiciones actuales o similares."
-            )
-            doc.add_paragraph(texto_base + texto_areas + connector)
-
-        # Escenario 2: Algunas cumplen, otras no
-        elif areas_cumplen and areas_no_cumplen:
-            forma_cumple = "cumple" if len(areas_cumplen) == 1 else "cumplen"
-            forma_no_cumple = "no cumple" if len(areas_no_cumplen) == 1 else "no cumplen"
-            texto_cumplen = generar_texto_areas(areas_cumplen, forma_cumple)
-            texto_no_cumplen = generar_texto_areas(areas_no_cumplen, forma_no_cumple)
-
-            texto_conclusion = texto_base + f"es posible concluir que {texto_cumplen}."
-            connector_medidas = (
-                f"Respecto de {texto_no_cumplen}, se debe adoptar la medida prescrita para su solución."
-                if len(areas_no_cumplen) == 1
-                else f"Respecto de {texto_no_cumplen}, se deben adoptar las medidas prescritas para su solución."
-            )
-            doc.add_paragraph(texto_conclusion)
-            doc.add_paragraph(connector_medidas)
-
-        # Escenario 3: Ninguna cumple
-        elif areas_no_cumplen and not areas_cumplen:
-            forma_no_cumple = "no cumple" if len(areas_no_cumplen) == 1 else "no cumplen"
-            texto_areas = generar_texto_areas(areas_no_cumplen, forma_no_cumple)
-            connector = (
-                ", por lo que se debe adoptar la medida prescrita para su solución."
-                if len(areas_no_cumplen) == 1
-                else ", por lo que se deben adoptar las medidas prescritas para su solución."
-            )
-            doc.add_paragraph(texto_base + texto_areas + connector)
-
-        else:
-            doc.add_paragraph("No se encontraron áreas evaluadas para generar un resumen.")
-
-    # -------------------------------
-    # 2) ANTECEDENTES DE LA ACTIVIDAD
-    # -------------------------------
-    if not df_visitas.empty:
-        row_visita = df_visitas.iloc[0]
-        doc.add_paragraph()
-        paragraph = doc.add_heading("Antecedentes de la actividad", level=2)
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-        # Se extrae información del centro para complementar el texto
-        razon_social = row_centro.get("razon_social", "") if not df_centros.empty else ""
-        nombre_ct = row_centro.get("nombre_ct", "") if not df_centros.empty else ""
-        direccion_ct = row_centro.get("direccion_ct", "")
-        comuna_ct = row_centro.get("comuna_ct", "")
-        direccion_completa = f"{direccion_ct}, {comuna_ct}"
-        fecha_visita = str(row_visita.get("fecha_visita", ""))
-        if fecha_visita:
-            fecha_obj = datetime.strptime(fecha_visita, "%Y-%m-%d")  # Convertir a objeto datetime
-            fecha_visita = fecha_obj.strftime("%d-%m-%Y")
-
-        hora_visita = str(row_visita.get("hora_visita", ""))
-        if hora_visita:
-            hora_obj = datetime.strptime(hora_visita, "%H:%M:%S")
-            hora_visita = hora_obj.strftime("%H:%M")
-        personal_visita = row_visita.get("nombre_personal_visita", "")
-        cargo_visita = row_visita.get("cargo_personal_visita", "")
-        consultor_ist = row_visita.get("consultor_ist", "")
-        temperatura = row_visita.get("temperatura_dia","")
-        doc.add_paragraph(
-            f"A solicitud de {razon_social} se realizó una evaluación de confort térmico en el centro de trabajo {nombre_ct}, ubicado en {direccion_completa}.")
-        doc.add_paragraph()
-        doc.add_paragraph(
-            f"La visita se efectuó el {fecha_visita} a las {hora_visita} a cargo de {consultor_ist}, profesional consultor/a de IST. En representación de la empresa adherente la visita contó con la participación de {personal_visita} ({cargo_visita}). Cabe destacar que la temperatura máxima registrada durante la jornada fue de {temperatura}°C.")
-        doc.add_paragraph()
-        # --- Agregar áreas evaluadas ---
-        if not df_mediciones.empty:
-            areas = df_mediciones["nombre_area"].unique()
-            if len(areas) == 1:
-                doc.add_paragraph(f"El área evaluada fue {join_with_and(areas)}.")
-            else:
-                doc.add_paragraph(f"Las áreas evaluadas fueron {join_with_and(areas)}.")
-        # --- FIN DE AGREGAR ---
-    else:
-        doc.add_paragraph("No se encontró información de visita para este CUV.")
-
-    # -------------------------------
-    # 3) METODOLOGÍA DE LAS MEDICIONES Y EVALUACIONES
-    # -------------------------------
-    doc.add_paragraph()
-    paragraph = doc.add_heading("Metodología de las mediciones y evaluaciones", level=2)
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    # --- Agregar detalles de equipos utilizando datos de df_equipos ---
-    if not df_visitas.empty and not df_equipos.empty:
-        row_visita = df_visitas.iloc[0]
-        # Obtener equipo de temperatura
-        equipo_temp_cod = row_visita.get('equipo_temp', '')
-        equipo_temp_detalles = df_equipos[df_equipos['id_equipo'] == equipo_temp_cod]
-        if not equipo_temp_detalles.empty:
-            eq_temp = equipo_temp_detalles.iloc[0]
-            equipo_temp_text = f"{eq_temp.get('nombre_equipo', '')} {eq_temp.get('marca_equipo', '')} {eq_temp.get('modelo_equipo', '')}"
-        else:
-            equipo_temp_text = equipo_temp_cod
-        # Obtener equipo de velocidad del aire
-        equipo_vel_cod = row_visita.get('equipo_vel_air', '')
-        equipo_vel_detalles = df_equipos[df_equipos['id_equipo'] == equipo_vel_cod]
-        if not equipo_vel_detalles.empty:
-            eq_vel = equipo_vel_detalles.iloc[0]
-            equipo_vel_text = f"{eq_vel.get('nombre_equipo', '')} {eq_vel.get('marca_equipo', '')} {eq_vel.get('modelo_equipo', '')}"
-        else:
-            equipo_vel_text = equipo_vel_cod
-        doc.add_paragraph(
-            f"Las condiciones del centro de trabajo se midieron utilizando los equipos {equipo_temp_text} y {equipo_vel_text}.")
-        doc.add_paragraph()
-    # --- FIN DE AGREGAR ---
+    # Primer párrafo
     doc.add_paragraph(
-        "La medición se realizó utilizando la metodología de FANGER para evaluación de confort térmico en espacios interiores de acuerdo a la Nota técnica N°47 del Instituto de Salud Pública.")
+        "El concepto de “confort térmico” describe el estado mental de una persona en términos de percibir un ambiente demasiado caluroso o demasiado frío. "
+        "Por otro lado, también se puede definir como una manifestación subjetiva de conformidad o satisfacción entre el trabajador con el ambiente térmico existente."
+    )
+
+    # Segundo párrafo con palabras en negrita
     doc.add_paragraph()
-    doc.add_paragraph(
-        "Se utiliza el estándar de vestimenta y tasa de actividad metabólica detalladas en la siguiente lista:")
-    # Verificar que existan mediciones
-    if not df_mediciones.empty:
-        # Eliminar duplicados según las columnas deseadas
-        df_lista = df_mediciones.drop_duplicates(subset=["puesto_trabajo", "clo", "met"])
+    p = doc.add_paragraph(
+        "El presente informe utiliza la metodología de FANGER para evaluación de confort térmico en espacios interiores de acuerdo a la Nota técnica N°47 del Instituto de Salud Pública. "
+        "De esta forma, los diferentes puestos de trabajo son evaluados y calificados en cada caso como "
+    )
+    p.add_run('"Cumple"').bold = True
+    p.add_run(" o ")
+    p.add_run('"No cumple"').bold = True
 
-        # Iterar sobre cada fila y crear un párrafo con la información formateada.
-        for _, row_med in df_lista.iterrows():
-            puesto = row_med.get("puesto_trabajo", "")
-            clo_val = row_med.get("clo", "")
-            met_val = row_med.get("met", "")
-
-            # Formatear numéricamente y, por ejemplo, reemplazar el punto por coma en el valor de clo:
-            try:
-                clo_formateado = f"{float(clo_val):.2f}".replace(".", ",")
-            except Exception:
-                clo_formateado = str(clo_val)
-            try:
-                met_formateado = f"{float(met_val):.2f}"
-            except Exception:
-                met_formateado = str(met_val)
-
-            # Generar el texto para el cargo
-            linea = (f"- Para el cargo de {puesto} se utilizó un {clo_formateado} clo para vestimenta "
-                     f"y se estimó en {met_formateado} met su actividad metabólica.")
-
-            # Agregar la línea como un párrafo independiente
-            doc.add_paragraph(linea)
-    else:
-        doc.add_paragraph("No se encontraron datos de vestimenta y actividad metabólica.")
+    # Tercer párrafo con palabras en negrita
+    doc.add_paragraph()
+    p2 = doc.add_paragraph(
+        "Los alcances de las calificaciones específicas para cada área o sector evaluado, corresponde al cumplimiento del Voto Medio Estimado "
+    )
+    p2.add_run("PMV").bold = True
+    p2.add_run(
+        " (Predicted Mean Vote), equivalente a una condición media deseable que indican la sensación térmica media de un entorno y ")
+    p2.add_run("PPD").bold = True
+    p2.add_run(
+        " (Predicted Percentage Dissatisfied) correspondiente al porcentaje de personas que sentirán algún grado de disconfort en un ambiente de trabajo evaluado.")
 
     # -------------------------------
     # Resultados de mediciones y evaluación
     # -------------------------------
-    doc.add_page_break()
-
     # Crear listas para las áreas que cumplen y no cumplen
     areas_cumplen = []
     areas_no_cumplen = []
 
-    paragraph = doc.add_heading("Resultados de mediciones y evaluación", level=2)
+    paragraph = doc.add_heading("3. Resultados de las mediciones y evaluación", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-    if not df_mediciones.empty:
-        # Definir el orden y nombres de columnas a mostrar
+    def generar_tabla_resumen(doc, df_mediciones):
+        # Verificamos si el DataFrame tiene datos
+        if df_mediciones.empty:
+            doc.add_paragraph("No se encontraron mediciones para detallar.")
+            return
+
+        # Definimos las columnas en el orden requerido
         columnas_resumen = [
-            "Área", "Sector", "Temp. bulbo seco(°C)", "Temp. globo(°C)",
-            "Humedad relativa (%)", "Velocidad del aire(m/s)", "PPD", "PMV",
-            "Estándar de confortabilidad térmica PMV  [-1,+1]"
+            "Área",
+            "Estándar confortabilidad",
+            "Puesto de trabajo",
+            "Temp. bulbo seco(°C)",
+            "Temp. globo(°C)",
+            "Humedad relativa (%)",
+            "Velocidad del aire(m/s)",
+            "PPD",
+            "PMV"
         ]
+
+        # Creamos la tabla con tantas columnas como la lista anterior
         tabla_resumen = doc.add_table(rows=1, cols=len(columnas_resumen))
         tabla_resumen.style = 'Table Grid'
-        # Formatear la primera fila para que tenga el estilo deseado (negrita y letras blancas)
 
+        # Encabezados
         hdr_cells = tabla_resumen.rows[0].cells
         for idx, col_name in enumerate(columnas_resumen):
             hdr_cells[idx].text = col_name
 
-        # Agrupar el DataFrame por área
+        # Agrupamos por área
         grouped = df_mediciones.groupby("nombre_area")
+
+        # Recorremos cada grupo (cada área)
         for area, group in grouped:
-            # Si hay más de una medición para el área, agregar línea de promedios
+            # Si hay múltiples mediciones en el área, calculamos promedio;
+            # si solo hay una, usamos directamente esa.
             if len(group) > 1:
-                try:
-                    avg_t_bul = group["t_bul_seco"].astype(float).mean()
-                except Exception:
-                    avg_t_bul = 0
-                try:
-                    avg_t_globo = group["t_globo"].astype(float).mean()
-                except Exception:
-                    avg_t_globo = 0
-                try:
-                    avg_hum = group["hum_rel"].astype(float).mean()
-                except Exception:
-                    avg_hum = 0
-                try:
-                    avg_vel = group["vel_air"].astype(float).mean()
-                except Exception:
-                    avg_vel = 0
+                # Calculamos promedios
+                avg_t_bul = group["t_bul_seco"].astype(float).mean()
+                avg_t_globo = group["t_globo"].astype(float).mean()
+                avg_hum = group["hum_rel"].astype(float).mean()
+                avg_vel = group["vel_air"].astype(float).mean()
+                avg_met = group["met"].astype(float).mean()
+                avg_clo = group["clo"].astype(float).mean()
 
-                # Calcular promedios de met y clo; asignar valores por defecto si son 0
+                # Calcular pmv/ppd a partir de la función pmv_ppd_iso
+                # (ajusta según tu propia lógica)
                 try:
-                    avg_met = group["met"].astype(float).mean()
-                    if avg_met == 0:
-                        avg_met = 1.1
-                except Exception:
-                    avg_met = 1.1
-                try:
-                    avg_clo = group["clo"].astype(float).mean()
-                    if avg_clo == 0:
-                        avg_clo = 0.5
-                except Exception:
-                    avg_clo = 0.5
-
-                try:
-                    results = pmv_ppd_iso(
+                    avg_ppd = pmv_ppd_iso(
                         tdb=avg_t_bul,
                         tr=avg_t_globo,
                         vr=avg_vel,
                         rh=avg_hum,
-                        met=avg_met,
-                        clo=avg_clo,
+                        met=avg_met,  # Ajusta si necesitas
+                        clo=avg_clo,  # Ajusta si necesitas
                         model="7730-2005",
                         limit_inputs=False,
                         round_output=True
-                    )
+                    ).ppd
+                    avg_pmv = pmv_ppd_iso(
+                        tdb=avg_t_bul,
+                        tr=avg_t_globo,
+                        vr=avg_vel,
+                        rh=avg_hum,
+                        met=avg_met,  # Ajusta si necesitas
+                        clo=avg_clo,  # Ajusta si necesitas
+                        model="7730-2005",
+                        limit_inputs=False,
+                        round_output=True
+                    ).pmv
                 except Exception as e:
                     logging.error("Error al calcular pmv_ppd_iso para el área %s: %s", area, e)
-                    results = None
+                #    avg_ppd = 0
+                #    avg_pmv = 0
 
-                if results is not None:
-                    if isinstance(results, dict):
-                        avg_ppd = float(results.get("ppd", 0))
-                        avg_pmv = float(results.get("pmv", 0))
-                    elif hasattr(results, "ppd") and hasattr(results, "pmv"):
-                        avg_ppd = float(results.ppd)
-                        avg_pmv = float(results.pmv)
-                    else:
-                        avg_ppd = 0
-                        avg_pmv = 0
-                else:
-                    avg_ppd = 0
-                    avg_pmv = 0
-
+                # Interpretación del PMV para mostrar "CUMPLE" o "NO CUMPLE"
                 analisis = interpret_pmv(avg_pmv)
 
-                # Agregar la línea de promedios
+                # Puesto de trabajo
+                valores_unicos = list(OrderedDict.fromkeys(group["puesto_trabajo"].dropna()))
+                puesto_trabajo = "\n".join(str(x) for x in valores_unicos)
+
+                # Creamos la fila final
                 row_cells = tabla_resumen.add_row().cells
-                row_cells[0].text = str(area)  # Se muestra el área en la línea de promedios
-                row_cells[1].text = "Promedio"  # Sector
-                row_cells[2].text = f"{avg_t_bul:.2f}"
-                row_cells[3].text = f"{avg_t_globo:.2f}"
-                row_cells[4].text = f"{avg_hum:.1f}"
-                row_cells[5].text = f"{avg_vel:.2f}"
-                row_cells[6].text = f"{avg_ppd:.2f}"
-                row_cells[7].text = f"{avg_pmv:.2f}"
-                row_cells[8].text = f"{analisis}"  # Placeholder
+                paragraph_0 = row_cells[0].paragraphs[0]
+                run_0 = paragraph_0.add_run(str(area))
+                run_0.bold = True
+                paragraph_1 = row_cells[1].paragraphs[0]
+                run_1 = paragraph_1.add_run(analisis.upper())
+                run_1.bold = True
+                row_cells[2].text = puesto_trabajo
+                row_cells[3].text = f"{avg_t_bul:.2f}"
+                row_cells[4].text = f"{avg_t_globo:.2f}"
+                row_cells[5].text = f"{avg_hum:.1f}"
+                row_cells[6].text = f"{avg_vel:.2f}"
+                row_cells[7].text = f"{avg_ppd:.2f}"
+                row_cells[8].text = f"{avg_pmv:.2f}"
 
-                if analisis.upper() == "CUMPLE":
-                    areas_cumplen.append(area)
-                elif analisis.upper() == "NO CUMPLE":
-                    areas_no_cumplen.append(area)
+            else:
+                # Solo hay una medición en el área, la usamos directamente
+                row = group.iloc[0]
+                t_bul = float(row.get("t_bul_seco", 0))
+                t_globo = float(row.get("t_globo", 0))
+                hum = float(row.get("hum_rel", 0))
+                vel = float(row.get("vel_air", 0))
+                ppd = float(row.get("ppd", 0))
+                pmv = float(row.get("pmv", 0))
+                analisis = row.get("resultado_medicion", "")  # "CUMPLE" o "NO CUMPLE"
+                puesto_trabajo = str(row.get("puesto_trabajo", ""))
 
-                # Si la celda de "Área" contiene información, poner toda la fila en negrita.
-                if row_cells[0].text.strip():
-                    set_row_bold(tabla_resumen.rows[-1])
-
-            # Agregar las filas individuales del grupo:
-            # Si el grupo tiene más de una fila (se agregó la línea de promedios), dejar la celda de área en blanco para todas las filas individuales.
-            for _, row_med in group.iterrows():
+                # Creamos la fila con los datos únicos
                 row_cells = tabla_resumen.add_row().cells
-                if len(group) > 1:
-                    row_cells[0].text = ""  # Dejar en blanco en filas individuales si hay resumen
-                else:
-                    row_cells[0].text = str(row_med.get("nombre_area", ""))
-                if len(group) == 1:
-                    row_cells[1].text = ""  # Dejar en blanco en filas individuales si hay resumen
-                else:
-                    row_cells[1].text = " - " + str(row_med.get("sector_especifico", ""))
-                try:
-                    t_bul = float(row_med.get("t_bul_seco", 0))
-                    row_cells[2].text = f"{t_bul:.2f}"
-                except:
-                    row_cells[2].text = str(row_med.get("t_bul_seco", ""))
-                try:
-                    t_globo = float(row_med.get("t_globo", 0))
-                    row_cells[3].text = f"{t_globo:.2f}"
-                except:
-                    row_cells[3].text = str(row_med.get("t_globo", ""))
-                try:
-                    hum = float(row_med.get("hum_rel", 0))
-                    row_cells[4].text = f"{hum:.1f}"
-                except:
-                    row_cells[4].text = str(row_med.get("hum_rel", ""))
-                try:
-                    vel = float(row_med.get("vel_air", 0))
-                    row_cells[5].text = f"{vel:.2f}"
-                except:
-                    row_cells[5].text = str(row_med.get("vel_air", ""))
-                try:
-                    ppd = float(row_med.get("ppd", 0))
-                    row_cells[6].text = f"{ppd:.2f}"
-                except:
-                    row_cells[6].text = str(row_med.get("ppd", ""))
-                try:
-                    pmv = float(row_med.get("pmv", 0))
-                    row_cells[7].text = f"{pmv:.2f}"
-                except:
-                    row_cells[7].text = str(row_med.get("pmv", ""))
+                paragraph_0 = row_cells[0].paragraphs[0]
+                run_0 = paragraph_0.add_run(str(area))
+                run_0.bold = True
+                paragraph_1 = row_cells[1].paragraphs[0]
+                run_1 = paragraph_1.add_run(analisis.upper())
+                run_1.bold = True
+                row_cells[2].text = puesto_trabajo
+                row_cells[3].text = f"{t_bul:.2f}"
+                row_cells[4].text = f"{t_globo:.2f}"
+                row_cells[5].text = f"{hum:.1f}"
+                row_cells[6].text = f"{vel:.2f}"
+                row_cells[7].text = f"{ppd:.2f}"
+                row_cells[8].text = f"{pmv:.2f}"
 
-                if len(group) > 1:
-                    row_cells[8].text = ""  # Dejar en blanco en filas individuales si hay resumen
-                else:
-                    row_cells[8].text = str(row_med.get("resultado_medicion", ""))
-
-                if row_cells[0].text.strip():
-                    (set_row_bold
-                     (tabla_resumen.rows[-1]))
-
-                if len(group) == 1:
-                    if row_med.get("resultado_medicion").upper() == "CUMPLE":
-                        areas_cumplen.append(area)
-                    elif row_med.get("resultado_medicion").upper() == "NO CUMPLE":
-                        areas_no_cumplen.append(area)
-
-        merge_column_cells(tabla_resumen, 0)
-        merge_column_cells(tabla_resumen, 8)
-        format_row(tabla_resumen.rows[0])
-        set_column_width(tabla_resumen, 0, Cm(2.5))
-        set_column_width(tabla_resumen, 1, Cm(2))
-        set_column_width(tabla_resumen, 2, Cm(1.5))
+        # Opcional: Ajustar anchos de columna si lo deseas
+        set_column_width(tabla_resumen, 0, Cm(3))
+        set_column_width(tabla_resumen, 1, Cm(3))
+        set_column_width(tabla_resumen, 2, Cm(3))
         set_column_width(tabla_resumen, 3, Cm(1.5))
         set_column_width(tabla_resumen, 4, Cm(1.5))
         set_column_width(tabla_resumen, 5, Cm(1.5))
         set_column_width(tabla_resumen, 6, Cm(1.5))
         set_column_width(tabla_resumen, 7, Cm(1.5))
         set_column_width(tabla_resumen, 8, Cm(1.5))
-    else:
-        doc.add_paragraph("No se encontraron mediciones para detallar.")
+
+        # Formato de la fila de encabezado (opcional)
+        format_row(tabla_resumen.rows[0])
+
+    generar_tabla_resumen(doc, df_mediciones)
+
+    # Procesar áreas antes del resumen
+    areas_cumplen, areas_no_cumplen = procesar_areas(df_mediciones)
 
     # Encabezado principal del contenido: Conclusiones
     doc.add_paragraph()
-    paragraph = doc.add_heading("Conclusiones", level=2)
-    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     if not df_centros.empty:
         row_centro = df_centros.iloc[0]
@@ -1229,15 +1100,42 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     # -------------------------------
     # 4) MEDIDAS CORRECTIVAS
     # -------------------------------
-    agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen)
+
+        paragraph = doc.add_heading("4. Prescripción de medidas", level=2)
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+
+        # Asumiendo que row_centro ya está definido y contiene la información de la empresa:
+        razon_social = row_centro.get('razon_social', 'RENDIC HERMANOS S.A.')
+
+        # Luego, en el cuerpo del documento:
+        doc.add_paragraph(
+            "Conforme al artículo 68 de la Ley N° 16.744, la implementación de las medidas prescritas por este organismo "
+            "administrador es de carácter obligatoria, por lo que su incumplimiento podrá ser sancionado con el recargo de "
+            "la cotización adicional diferenciada, sin perjuicio de las demás sanciones que correspondan."
+        )
+        doc.add_paragraph()
+        doc.add_paragraph(
+            f"No obstante, {razon_social} podrá implementar otras medidas técnicas y/o administrativas equivalentes a las "
+            "señaladas en el presente informe y que contribuyan a disminuir la exposición de sus trabajadores, debiendo "
+            "informar a IST, quien evaluará su efectividad una vez implementadas. Adicionalmente, en el caso de que las áreas "
+            "de trabajo sean operadas por contratistas, el mandante debe informar obligatoriamente a todos sus contratistas los "
+            "riesgos a los que están expuestos."
+        )
+        doc.add_paragraph()
+        doc.add_paragraph(
+            "Acorde a las condiciones existentes al momento de las mediciones, al resultado de las mismas y a las conclusiones "
+            "obtenidas, se establecen las siguientes medidas de control:"
+        )
+
+        agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen)
+
     doc.add_paragraph()
 
     # -------------------------------
     # 5) VIGENCIA DEL INFORME
     # -------------------------------
     # Encabezado principal del contenido: Vigencia del informe
-    doc.add_paragraph()
-    paragraph = doc.add_heading("Vigencia del informe", level=2)
+    paragraph = doc.add_heading("5. Vigencia del informe", level=2)
     paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
     if not df_visitas.empty:
         doc.add_paragraph("En términos generales, el presente informe tiene validez de 3 años, a excepción que existan cambios en la situación, del tipo ingenieril o administrativo, que presupongan modificación a las condiciones encontradas al momento de la medición, lo cual implicará realizar una nueva evaluación en un plazo menor al señalado.")
@@ -1249,8 +1147,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     doc.add_paragraph()
     doc.add_paragraph()
     doc.add_paragraph()
-    doc.add_paragraph()
-    doc.add_paragraph()
+
 
     if not df_visitas.empty:
         row_visita = df_visitas.iloc[0]
@@ -1277,85 +1174,68 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     # 6) ANEXOS
     # -------------------------------
     doc.add_page_break()
-    doc.add_heading("Equipos de medición utilizado", level=2)
-    # En lugar de mostrar el listado completo, se mostrará solo la información relacionada.
-    if not df_visitas.empty and not df_equipos.empty:
-        row_visita = df_visitas.iloc[0]
-        # Obtener los códigos de equipos que están en uso en la visita
-        equipo_temp_cod = row_visita.get('equipo_temp', '')
-        equipo_vel_cod = row_visita.get('equipo_vel_air', '')
-        codigos_en_uso = [equipo_temp_cod, equipo_vel_cod]
+    doc.add_heading("Anexo 1. Consideraciones técnicas de la evaluación", level=2)
 
-        # Filtrar df_equipos para que solo incluya las filas donde 'id_equipo' está en codigos_en_uso
-        df_equipos_filtrado = df_equipos[df_equipos['id_equipo'].isin(codigos_en_uso)]
+    # Agrega un párrafo con el título para la tabla
+    doc.add_heading("a)     Verificación en terreno de parámetros de los equipos", level=3)
 
-        # Definir el mapeo de campos a mostrar
-        field_mapping = {
-            "nombre_equipo": "Tipo de equipo",
-            "cod_equipo": "Código",
-            "n_serie_equipo": "Número de serie",
-            "marca_equipo": "Marca",
-            "modelo_equipo": "Modelo",
-            "fecha_calibracion": "Ultima calibración",
-            "prox_calibracion": "Próxima calibración",
-            "empresa_certificadora": "Empresa certificadora",
-            "num_certificado": "Número de certificado",
-            "url_certificado": "Respaldo certificado"
-        }
+    # Crea la tabla con 4 columnas y aplica un estilo
+    table_calib = doc.add_table(rows=0, cols=4)
+    table_calib.style = 'Table Grid'
 
-        if not df_equipos_filtrado.empty:
-            for idx, row_eq in df_equipos_filtrado.iterrows():
-                # Crear una tabla de dos columnas, una para el campo y otra para el valor
-                tabla_equipo = doc.add_table(rows=len(field_mapping), cols=2)
-                tabla_equipo.style = 'Table Grid'
-                for row_num, (key, display_name) in enumerate(field_mapping.items()):
-                    tabla_equipo.rows[row_num].cells[0].text = display_name
-                    if key == "url_certificado":
-                        url = str(row_eq.get(key, ""))
-                        if url.strip():
-                            qr_img = generate_qr_code(url)
-                            cell = tabla_equipo.rows[row_num].cells[1]
-                            cell.text = ""
-                            run = cell.paragraphs[0].add_run()
-                            run.add_break()
-                            run.add_picture(qr_img, width=Inches(1))
-                            run.add_break()
-                        else:
-                            tabla_equipo.rows[row_num].cells[1].text = ""
-                    else:
-                        tabla_equipo.rows[row_num].cells[1].text = str(row_eq.get(key, ""))
-                        set_column_width(tabla_equipo, 0, Cm(4))
-                        set_column_width(tabla_equipo, 1, Cm(14))
+    # Agrega la fila de encabezado
+    hdr_cells = table_calib.add_row().cells
+    hdr_cells[0].text = "Temperatura"
+    hdr_cells[1].text = "Patrón"
+    hdr_cells[2].text = "Verificación inicial"
+    hdr_cells[3].text = "Verificación final"
 
-                doc.add_paragraph("")  # Separador entre tablas
-        else:
-            doc.add_paragraph("No se encontró información de equipos de medición relacionados con la visita.")
+    # Si hay datos en df_visitas, agrega las filas para cada equipo
+    if not df_visitas.empty:
+        # Para TBS
+        row_cells = table_calib.add_row().cells
+        row_cells[0].text = "TBS"
+        row_cells[1].text = str(row_visita.get('patron_tbs', ''))
+        row_cells[2].text = str(row_visita.get('ver_tbs_ini', ''))
+        row_cells[3].text = str(row_visita.get('ver_tbs_fin', ''))
+
+        # Para TBH
+        row_cells = table_calib.add_row().cells
+        row_cells[0].text = "TBH"
+        row_cells[1].text = str(row_visita.get('patron_tbh', ''))
+        row_cells[2].text = str(row_visita.get('ver_tbh_ini', ''))
+        row_cells[3].text = str(row_visita.get('ver_tbh_fin', ''))
+
+        # Para TG
+        row_cells = table_calib.add_row().cells
+        row_cells[0].text = "TG"
+        row_cells[1].text = str(row_visita.get('patron_tg', ''))
+        row_cells[2].text = str(row_visita.get('ver_tg_ini', ''))
+        row_cells[3].text = str(row_visita.get('ver_tg_fin', ''))
+    else:
+        # Si no hay información, se agrega una fila de error
+        row_cells = table_calib.add_row().cells
+        row_cells[0].text = "D. Detalles de equipos y calibración"
+        row_cells[1].text = "No se encontró información de visita."
+        # Se pueden unir las celdas restantes para que el mensaje quede centrado
+        merged = row_cells[0].merge(row_cells[1])
+        merged = merged.merge(row_cells[2]).merge(row_cells[3])
+
+    # Configurar el ancho de cada columna (opcional)
+    set_column_width(table_calib, 0, Cm(4.25))
+    set_column_width(table_calib, 1, Cm(4.25))
+    set_column_width(table_calib, 2, Cm(4.25))
+    set_column_width(table_calib, 3, Cm(4.25))
+    format_row(table_calib.rows[0])
+
 
     doc.add_paragraph()
-    table_calib = doc.add_table(rows=0, cols=2)
-    table_calib.style = 'Table Grid'
-    if not df_visitas.empty:
-        add_row(table_calib, "Verificación de parámetros de equipos en terreno", "")
-        add_row(table_calib, "Patrón TBS", row_visita.get('patron_tbs', ''))
-        add_row(table_calib, "Verificación TBS inicial", row_visita.get('ver_tbs_ini', ''))
-        add_row(table_calib, "Verificación TBS final", row_visita.get('ver_tbs_fin', ''))
-        add_row(table_calib, "Patrón TBH", row_visita.get('patron_tbh', ''))
-        add_row(table_calib, "Verificación TBH inicial", row_visita.get('ver_tbh_ini', ''))
-        add_row(table_calib, "Verificación TBH final", row_visita.get('ver_tbh_fin', ''))
-        add_row(table_calib, "Patrón TG", row_visita.get('patron_tg', ''))
-        add_row(table_calib, "Verificación TG inicial", row_visita.get('ver_tg_ini', ''))
-        add_row(table_calib, "Verificación TG final", row_visita.get('ver_tg_fin', ''))
-    else:
-        add_row(table_calib, "D. Detalles de equipos y calibración", "No se encontró información de visita.")
-    set_column_width(table_calib, 0, Cm(4))
-    set_column_width(table_calib, 1, Cm(14))
+    doc.add_heading("b)     Caracterización de vestimenta utilizada y tasa metabólica", level=3)
 
-    ##########################
-    #Observaciones de áreas
-    ##########################
+    doc.add_paragraph("Para efectos del presente informe, se considera el valor de 0,5 Clo, que es equivalente a ropa normal de trabajo y una tasa metabólica (Mets) de 1,1 a 1,2 (valor equivalente a 109 kcal/hrs.) en función de los componentes de la actividad para el área Línea de Cajas o Sala de ventas, y una tasa metabólica de 1,89 Mets (valor equivalente a 187 kcal/hrs.), en función de la profesión, para el área Bodega o Recepción.")
 
-    doc.add_page_break()
-    doc.add_heading("Características de las areas evaluadas", level=2)
+    doc.add_paragraph()
+    doc.add_heading("c)     Características generales de las areas evaluadas", level=3)
 
     # Crear la tabla con 3 columnas: Área, Características constructivas y Condiciones de ventilación
     tabla_caract = doc.add_table(rows=1, cols=3)
@@ -1379,61 +1259,100 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         row_cells[1].text = str(registro["caract_constructivas"])
         row_cells[2].text = str(registro["ingreso_salida_aire"])
 
-    set_column_width(tabla_caract, 0, Cm(2.5))
+    set_column_width(tabla_caract, 0, Cm(3))
     set_column_width(tabla_caract, 1, Cm(7))
     set_column_width(tabla_caract, 2, Cm(7))
     format_row(tabla_caract.rows[0])
 
 
 
-    '''
-    # Agrupar el DataFrame por "nombre_area"
-    grouped = df_mediciones.groupby("nombre_area")
-    for area, group in grouped:
-        # Agregar un título para el área
-        doc.add_paragraph(f"Área: {area}", style='Heading2')
 
-        # Usar el primer registro del grupo para extraer los datos de instalación
-        registro = group.iloc[0]
+    # Salto de página y título del anexo
+    doc.add_page_break()
+    doc.add_heading("Anexo 2. Instrumentos de medición utilizados", level=2)
 
-        # Definir los pares (etiqueta, valor) a mostrar
-        campos = [
-            ("cond_techumbre", registro["cond_techumbre"]),
-            ("obs_techumbre", registro["obs_techumbre"]),
-            ("cond_paredes", registro["cond_paredes"]),
-            ("obs_paredes", registro["obs_paredes"]),
-            ("cond_vantanal", registro["cond_vantanal"]),
-            ("obs_ventanal", registro["obs_ventanal"]),
-            ("cond_aire_acond", registro["cond_aire_acond"]),
-            ("obs_aire_acond", registro["obs_aire_acond"]),
-            ("cond_ventiladores", registro["cond_ventiladores"]),
-            ("obs_ventiladores", registro["obs_ventiladores"]),
-            ("cond_inyeccion_extraccion", registro["cond_inyeccion_extraccion"]),
-            ("obs_inyeccion_extraccion", registro["obs_inyeccion_extraccion"]),
-            ("cond_ventanas", registro["cond_ventanas"]),
-            ("obs_ventanas", registro["obs_ventanas"]),
-            ("cond_puertas", registro["cond_puertas"]),
-            ("obs_puertas", registro["obs_puertas"]),
-            ("cond_otras", registro["cond_otras"]),
-            ("obs_otras", registro["obs_otras"])
-        ]
+    if not df_visitas.empty and not df_equipos.empty:
+        row_visita = df_visitas.iloc[0]
+        # Obtener los códigos de equipos que están en uso en la visita
+        equipo_temp_cod = row_visita.get('equipo_temp', '')
+        equipo_vel_cod = row_visita.get('equipo_vel_air', '')
+        codigos_en_uso = [equipo_temp_cod, equipo_vel_cod]
 
-        # Crear la tabla con 2 columnas; la cantidad de filas es 1 (opcional, para encabezado) + len(campos)
-        tabla_instalacion = doc.add_table(rows=1, cols=2)
-        tabla_instalacion.style = 'Table Grid'
+        # Filtrar df_equipos para que solo incluya las filas donde 'id_equipo' está en codigos_en_uso
+        df_equipos_filtrado = df_equipos[df_equipos['id_equipo'].isin(codigos_en_uso)]
 
-        # Opcional: agregar una fila de encabezado para identificar las columnas
-        hdr_cells = tabla_instalacion.rows[0].cells
-        hdr_cells[0].text = "Etiqueta"
-        hdr_cells[1].text = "Contenido"
+        # Definir el mapeo de campos a mostrar
+        field_mapping = {
+            "nombre_equipo": "Tipo de equipo",
+            "cod_equipo": "Código",
+            "n_serie_equipo": "Número de serie",
+            "marca_equipo": "Marca",
+            "modelo_equipo": "Modelo",
+            "fecha_calibracion": "Última calibración",
+            "prox_calibracion": "Próxima calibración",
+            "empresa_certificadora": "Empresa certificadora",
+            "num_certificado": "Número de certificado",
+            "url_certificado": "Respaldo certificado"
+        }
 
-        # Agregar una fila por cada campo con su etiqueta y valor
-        for etiqueta, valor in campos:
-            row_cells = tabla_instalacion.add_row().cells
-            row_cells[0].text = etiqueta
-            row_cells[1].text = str(valor)
+        if not df_equipos_filtrado.empty:
+            for idx, row_eq in df_equipos_filtrado.iterrows():
+                # Crear una tabla de dos columnas para los datos del equipo
+                tabla_equipo = doc.add_table(rows=len(field_mapping), cols=2)
+                tabla_equipo.style = 'Table Grid'
+                for row_num, (key, display_name) in enumerate(field_mapping.items()):
+                    tabla_equipo.rows[row_num].cells[0].text = display_name
+                    if key == "url_certificado":
+                        url = str(row_eq.get(key, ""))
+                        if url.strip():
+                            # Genera un código QR (función asumida)
+                            qr_img = generate_qr_code(url)
+                            cell = tabla_equipo.rows[row_num].cells[1]
+                            cell.text = ""
+                            run = cell.paragraphs[0].add_run()
+                            run.add_break()
+                            run.add_picture(qr_img, width=Inches(1))
+                            run.add_break()
+                        else:
+                            tabla_equipo.rows[row_num].cells[1].text = ""
+                    else:
+                        tabla_equipo.rows[row_num].cells[1].text = str(row_eq.get(key, ""))
+                # Ajustar anchos de columnas para toda la tabla (se recomienda hacerlo fuera del bucle interno)
+                set_column_width(tabla_equipo, 0, Cm(3.5))
+                set_column_width(tabla_equipo, 1, Cm(13.5))
 
-    '''
+                doc.add_paragraph("")  # Separador entre tablas
+
+            for idx, row_eq in enumerate(df_equipos_filtrado.itertuples(), 1):
+                id_equipo = str(row_eq.id_equipo)  # Asegúrate que este campo coincide con tus directorios
+
+                # Ruta al directorio de imágenes para este equipo
+                img_dir = os.path.join("imagenes_pdf", id_equipo)
+
+                try:
+                    if os.path.exists(img_dir) and os.path.isdir(img_dir):
+                        # Obtener todas las imágenes ordenadas numéricamente
+                        imagenes = natsorted([
+                            os.path.join(img_dir, f)
+                            for f in os.listdir(img_dir)
+                            if f.lower().endswith(('.png', '.jpg', '.jpeg'))
+                        ])
+
+                        # Insertar todas las imágenes en el documento
+                        for img_path in imagenes:
+                            # Añadir imagen ocupando el ancho completo de la página
+                            doc.add_picture(img_path, width=Cm(17))
+                    else:
+                        doc.add_paragraph(f"No se encontraron imágenes para el equipo {id_equipo}")
+                except Exception as e:
+                    doc.add_paragraph(f"Error al cargar imágenes para equipo {id_equipo}: {str(e)}")
+
+        else:
+            doc.add_paragraph("No se encontró información de equipos de medición relacionados con la visita.")
+    else:
+        doc.add_paragraph("No se encontró información de la visita o de los equipos.")
+
+    # (Continúa el resto del script si es necesario)
 
     # -------------------------------
     # Finaliza el documento y lo retorna como BytesIO
@@ -1442,35 +1361,3 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     doc.save(buffer)
     buffer.seek(0)
     return buffer
-
-
-# -----------------------------------------------
-# FUNCIÓN PRINCIPAL (OPCIONAL) PARA GENERAR EL INFORME
-# -----------------------------------------------
-def generar_informe(cuv: str):
-    """
-    Función principal para generar el informe a partir del CUV.
-    Se obtienen los dataframes necesarios (usando las funciones de data_access)
-    y se genera el documento Word.
-    """
-    from data_access import get_centro, get_visita, get_mediciones, get_equipos
-    df_centros = get_centro(cuv)
-    df_visitas = get_visita(cuv)
-    if df_visitas.empty:
-        logging.error("No se encontró ninguna visita para el CUV proporcionado.")
-        return
-    # Se selecciona la visita más reciente
-    visita_id = df_visitas.iloc[0].get("id_visita")
-    df_mediciones = get_mediciones(visita_id)
-    df_equipos = get_equipos()
-    buffer = generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos)
-    output_filename = f"informe_confort_termico_{cuv}.docx"
-    with open(output_filename, "wb") as f:
-        f.write(buffer.getbuffer())
-    logging.info(f"Informe generado y guardado como {output_filename}")
-
-
-if __name__ == "__main__":
-    # Ejemplo de llamada. Modifica el CUV según sea necesario.
-    cuv_input = "114123"  # Cambia el valor según el CUV a consultar
-    generar_informe(cuv_input)
