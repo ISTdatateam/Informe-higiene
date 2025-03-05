@@ -526,15 +526,19 @@ def main():
                 informe_docx = generar_informe_desde_cuv(cuv)
 
                 if informe_docx:
-                    st.success("Informe generado correctamente.")
-                    st.download_button(
-                        label="Descargar Informe",
-                        data=informe_docx,
-                        file_name=f"informe_{cuv}.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                    )
-                else:
-                    st.error("Hubo un problema al generar el informe.")
+                    st.session_state["informe_docx"] = informe_docx  # 📌 Guardar el informe en la sesión
+
+
+        # Mostrar el botón de descarga solo si ya se generó el informe
+        if "informe_docx" in st.session_state:
+            st.success("Informe generado correctamente.")
+            st.download_button(
+                label="Descargar Informe",
+                data=st.session_state["informe_docx"],
+                file_name=f"informe_{st.session_state.get('input_cuv_str', 'documento')}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                key="descargar_informe"
+            )
 
         # 5. Informe y Calculadora de Confort
 
