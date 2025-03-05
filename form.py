@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, date, time
 from data_access2 import get_data   # Función que obtiene el CSV principal
-from data_access import insertar_visita   # Función que obtiene el CSV principal
+from data_access import insertar_visita, insert_verif_final_visita   # Función que obtiene el CSV principal
 from doc_utils import generar_informe_en_word  # Función para generar el Word
 from pythermalcomfort.models import pmv_ppd_iso
 import zipfile
@@ -478,7 +478,6 @@ def main():
                 default = valor_inicial
             return st.number_input(label, value=default, step=0.1)
 
-
         with st.form("form3"):
             st.markdown("#### Verificación final")
             verif_tbs_final = number_input_con_inicial("Verificación TBS final", "verif_tbs_inicial")
@@ -486,6 +485,7 @@ def main():
             verif_tg_final = number_input_con_inicial("Verificación TG final", "verif_tg_inicial")
             comentarios_finales = st.text_area("Comentarios finales de evaluación")
             submit3 = st.form_submit_button("Guardar Cierre")
+
         if submit3:
             st.session_state["cierre"] = {
                 "Verificación TBS final": verif_tbs_final,
@@ -493,14 +493,35 @@ def main():
                 "Verificación TG final": verif_tg_final,
                 "Comentarios finales de evaluación": comentarios_finales
             }
-            st.success("Formulario 3 guardado.")
 
-        #INFORME
-        if st.session_state["cierre"]:
+            # Obtener ID de la visita desde session_state
+            id_visita = st.session_state.get("id_visita", None)
+
+            if id_visita:
+                # Intentamos actualizar el registro en la base de datos
+                actualizado = insert_verif_final_visita(id_visita, verif_tbs_final, verif_tbh_final, verif_tg_final,
+                                                        comentarios_finales)
+
+                if actualizado:
+                    st.success("Formulario 3 guardado y visita actualizada correctamente.")
+
+                    # Guardar el estado de actualización en session_state
+                    st.session_state["visita_actualizada"] = True
+                else:
+                    st.error(
+                        "No se pudo actualizar la visita en la base de datos. Revisa los datos e intenta nuevamente.")
+                    st.session_state["visita_actualizada"] = False
+            else:
+                st.error(
+                    "No se encontró el ID de la visita en la sesión. Verifica que la visita fue creada correctamente.")
+                st.session_state["visita_actualizada"] = False
+
+        # Fuera del `if`, mostrar la opción de generar el informe solo si la actualización fue exitosa
+        if st.session_state.get("visita_actualizada", False):
             st.subheader("Generar Informe")
             st.write("Los datos han sido guardados. ¿Deseas generar el informe basado en la base de datos?")
 
-            if st.button("Sí, generar informe automáticamente"):
+            if st.button("Sí, generar informe automáticamente", key="generar_informe"):
                 cuv = st.session_state.get("input_cuv_str", "")
                 informe_docx = generar_informe_desde_cuv(cuv)
 
@@ -512,11 +533,10 @@ def main():
                         file_name=f"informe_{cuv}.docx",
                         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                     )
+                else:
+                    st.error("Hubo un problema al generar el informe.")
 
         # 5. Informe y Calculadora de Confort
-        st.markdown("---")
-        st.header("Informe")
-        st.markdown("---")
 
         st.markdown("---")
         st.header("Calculadora de confort")
