@@ -526,7 +526,7 @@ def main():
                 informe_docx = generar_informe_desde_cuv(cuv)
 
                 if informe_docx:
-                    st.session_state["informe_docx"] = informe_docx  # 📌 Guardar el informe en la sesión
+                    st.session_state["informe_docx"] = informe_docx
 
 
         # Mostrar el botón de descarga solo si ya se generó el informe
