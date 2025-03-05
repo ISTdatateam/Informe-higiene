@@ -19,6 +19,17 @@ from informe import generar_informe_desde_cuv
 
 st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 
+def get_met(puesto_trabajo):
+    if puesto_trabajo == "Cajera":
+        return 1.1
+    elif puesto_trabajo == "Reponedor":
+        return 1.2
+    elif puesto_trabajo in ["Bodeguero", "Recepcionista"]:
+        return 1.89
+    else:
+        return 1.1  # Opcional: puedes retornar un valor por defecto si el puesto no es reconocido
+
+
 def check_resultado_pmv(pmv):
     return "Cumple" if -1 <= pmv <= 1 else "No cumple"
 
@@ -118,6 +129,9 @@ def main():
             nombre_personal = st.text_input("Nombre del personal SMU")
             cargo = st.text_input("Cargo", value="Administador/a")
             consultor_ist = st.text_input("Consultor IST")
+            cargo_consultor = st.selectbox("Cargo del consultor", options=["Seleccione...", "Consultor en Higiene Ocupacional", "Consultor en Prevención de Riesgos"], index=0)
+            zonal_consultor = st.selectbox("Zonal del consultor", options=["Seleccione...", "Gerencia Zonal Centro - Viña del Mar", "Gerencia Zonal Sur Austral", "Gerencia Zonal Metropolitana", "Gerencia Zonal Sur", "Gerencia Zonal Norte"], index=0)
+
             st.markdown("#### Verificación de parámetros")
             cod_equipo_t = st.selectbox("Equipo temperatura",
                                         options=["Seleccione...",
@@ -215,7 +229,9 @@ def main():
                 patron_tbh,
                 verif_tbh_inicial,
                 patron_tg,
-                verif_tg_inicial
+                verif_tg_inicial,
+                cargo_consultor,
+                zonal_consultor
             )
 
             if id_visita:
@@ -267,7 +283,7 @@ def main():
                         vel_air = st.number_input(f"Velocidad del aire (m/s) {i}", step=0.1, key=f"vel_aire_{i}")
 
                         # Cálculo de PMV y PPD
-                        met = 1.1  # Puede depender del puesto de trabajo
+                        met = get_met(puesto_trabajo)  # Puede depender del puesto de trabajo
                         clo = 0.5 if vestimenta_trabajador == "Habitual" else 1.0
                         resultados = pmv_ppd_iso(tdb=t_bul_seco, tr=t_globo, vr=vel_air, rh=hum_rel, met=met, clo=clo,
                                                  model="7730-2005", limit_inputs=False)
@@ -431,60 +447,6 @@ def main():
 
         # 5. Informe y Calculadora de Confort
 
-        st.markdown("---")
-        st.header("Calculadora de confort")
-        st.write("Selecciona el área para ver los resultados calculados automáticamente.")
-
-        if "areas_data" in st.session_state and st.session_state["areas_data"]:
-            area_options = [
-                f"Área {i + 1} - {area.get('Area o sector', 'Sin dato')}"
-                for i, area in enumerate(st.session_state["areas_data"])
-            ]
-            opcion_area = st.selectbox("Selecciona el área para el cálculo de PMV/PPD", options=area_options)
-            indice_area = int(opcion_area.split(" ")[1]) - 1  # Índice 0-based
-            datos_area = st.session_state["areas_data"][indice_area]
-
-            tdb_default = datos_area.get("Temperatura bulbo seco", 0.0)
-            tr_default = datos_area.get("Temperatura globo", 0.0)
-            rh_default = datos_area.get("Humedad relativa", 0.0)
-            v_default = datos_area.get("Velocidad del aire", 0.8)
-            puesto_default = datos_area.get("Puesto de trabajo", "Cajera")
-            vestimenta_default = datos_area.get("Vestimenta", "Vestimenta habitual")
-        else:
-            st.warning("No hay datos de áreas en la sesión. Se usarán valores por defecto.")
-            tdb_default, tr_default, rh_default, v_default = 30.0, 30.0, 32.0, 0.8
-            puesto_default, vestimenta_default = "Cajera", "Vestimenta habitual"
-
-        st.markdown("### Ajusta o verifica los valores del área seleccionada")
-        met_mapping = {"Cajera": 1.1, "Reponedor": 1.2, "Bodeguero": 1.89, "Recepcionista": 1.89}
-        clo_mapping = {"Vestimenta habitual": 0.5, "Vestimenta de invierno": 1.0}
-        met = met_mapping.get(puesto_default, 1.2)
-        clo_dynamic = clo_mapping.get(vestimenta_default, 0.5)
-        st.write("Puesto de trabajo:", puesto_default, " -- ", met, " met")
-        st.write("Vestimenta:", vestimenta_default, " -- clo", clo_dynamic)
-
-        tdb = st.number_input("Temperatura de bulbo seco (°C):", value=tdb_default)
-        tr = st.number_input("Temperatura radiante (°C):", value=tr_default)
-        rh = st.number_input("Humedad relativa (%):", value=rh_default)
-        v = st.number_input("Velocidad del aire (m/s):", value=v_default)
-
-        results = pmv_ppd_iso(
-            tdb=tdb,
-            tr=tr,
-            vr=v,
-            rh=rh,
-            met=met,
-            clo=clo_dynamic,
-            model="7730-2005",
-            limit_inputs=False,
-            round_output=True
-        )
-
-        st.subheader("Resultados")
-        st.write(f"**PMV:** {results.pmv}")
-        st.write(f"**PPD:** {results.ppd}%")
-        interpretation = interpret_pmv(results.pmv)
-        st.markdown(f"##### El valor de PMV {results.pmv} indica que la sensación térmica es: **{interpretation}**.")
     else:
         st.info("Ingresa un CUV y haz clic en 'Buscar' para ver la información y generar el informe.")
 
