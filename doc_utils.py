@@ -11,12 +11,11 @@ from PIL import ImageOps  # Asegúrate de tener Pillow instalado
 from io import BytesIO
 from docx.oxml.ns import qn
 from docx.enum.table import WD_ALIGN_VERTICAL
-from pdf2image import convert_from_path
 import requests
 import os
 from natsort import natsorted
 from collections import OrderedDict
-
+from datetime import datetime, date
 
 # Configuración básica del logging
 # logging.basicConfig(level=logging.INFO)
@@ -26,6 +25,28 @@ logging.basicConfig(level=logging.DEBUG)
 # -----------------------------------------------
 # Nuevas funciones
 # -----------------------------------------------
+
+def formatear_fecha(fecha):
+    """
+    Recibe una fecha en formato string (con formato '%Y-%m-%d') o como objeto datetime/date.
+    Devuelve la fecha formateada como 'dd-mm-YYYY'. Si no se proporciona una fecha válida, retorna una cadena vacía.
+    """
+    if not fecha:
+        return ''
+    if isinstance(fecha, (datetime, date)):
+        return fecha.strftime('%d-%m-%Y')
+    else:
+        return datetime.strptime(fecha, '%Y-%m-%d').strftime('%d-%m-%Y')
+
+
+def ftemp(valor):
+    """
+    Convierte el valor de temperatura a cadena, reemplaza el punto por una coma y añade el sufijo '°C'.
+    Si no se proporciona un valor válido, retorna una cadena vacía.
+    """
+    if not valor:
+        return ''
+    return f"{str(valor).replace('.', ',')}"
 
 
 def calcular_analisis_area(group):
@@ -502,10 +523,6 @@ def agregar_medidas_por_accion(table, medidas):
                 cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     return table
 
-
-
-
-
 ####
 # Añade al final de doc_utils.py
 
@@ -529,7 +546,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
                     "- Consultar con el proveedor el óptimo uso del equipo por ejemplo: periodicidad de suministrar agua helada, hielo o implemento refrigerante autorizado para el equipamiento adquirido, con el fin de estar constantemente enfriando durante toda la jornada laboral el área, especialmente en periodo de mayor temperaturas o época estival.",
                     "- Llevar una Bitácora o Registro de la actividad en lo referido al uso de enfriador(es)."
                 ],
-                'plazo': '6 meses desde la recepción del presente informe técnico'
+                'plazo': '[__] meses desde la recepción del presente informe técnico'
             },
             {
                 'condicion': dif_temp > 2.0,
@@ -540,7 +557,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
                     "- (REVISAR SI CORRESPONDE) Implementar protecciones solares reflectivas",
                     "- (REVISAR SI CORRESPONDE) Aislar fuentes de calor radiante"
                 ],
-                'plazo': '3 meses desde la recepción del presente informe técnico'
+                'plazo': '[__] meses desde la recepción del presente informe técnico'
             },
             {
                 'condicion': vr < 0.2,
@@ -551,7 +568,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
                     "- (REVISAR SI CORRESPONDE) Implementar sistemas de extracción forzada",
                     "- (REVISAR SI CORRESPONDE) Optimizar ventilación cruzada"
                 ],
-                'plazo': '3 meses desde la recepción del presente informe técnico'
+                'plazo': '[__] meses desde la recepción del presente informe técnico'
             }
         ]
     '''
@@ -571,7 +588,7 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
                     "- (REVISAR SI CORRESPONDE) Mejorar aislamiento térmico en envolvente",
                     "- (REVISAR SI CORRESPONDE) Optimizar sellado de infiltraciones"
                 ],
-                'plazo': '3 meses desde la recepción del presente informe técnico'
+                'plazo': '[__] meses desde la recepción del presente informe técnico'
             }
         ]
     '''
@@ -738,7 +755,7 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
     medidas_administrativas = [
         {
             #'tipo_medida': 'Comunicación',
-            'areas': ['Todas'],
+            'areas': ['Todas las áreas evaluadas'],
             'acciones': [
                 "- Informar a cada persona trabajadora acerca de los riesgos que entrañan sus labores, de las medidas preventivas, de los métodos y/o procedimientos de trabajo correctos, acorde a lo identificado por la empresa. Además de lo señalado previamente, la entidad empleadora deberá informar de manera oportuna y adecuada el resultado del presente informe técnico.",
                 "- Realizar capacitaciones (teóricas/prácticas) periódicas en prevención de riesgos laborales, con la finalidad de garantizar el aprendizaje efectivo y eficaz, dejando registro de dichas capacitaciones y evaluaciones. En el marco de los artículos 15° y 16° del Párrafo IV del D.S 44 “Aprueba nuevo reglamento sobre gestión preventiva de los riesgos laborales para un entorno de trabajo seguro y saludable."
@@ -796,8 +813,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     format_columns(df_visitas, 'cargo_personal_visita', mode="capitalize")
     format_columns(df_mediciones, ['nombre_area', 'sector_especifico','puesto_trabajo'], mode="capitalize")
 
-
-
     doc = Document()
     look_informe(doc)
     set_vertical_alignment(doc, section_index=0, alignment='top')
@@ -842,7 +857,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         table_empresa = doc.add_table(rows=0, cols=2)
         table_empresa.style = 'Table Grid'
         add_row(table_empresa, "1.1 Información empresa")
-        add_row(table_empresa, "Razón Social", row_centro.get('razon_social', '').str.lower().str.capitalize)
+        add_row(table_empresa, "Razón Social", row_centro.get('razon_social', '').lower().title())
         add_row(table_empresa, "RUT", row_centro.get('rut', ''))
         add_row(table_empresa, "CIIU", row_centro.get('CIIU', '[COMPLETAR]'))
 
@@ -854,7 +869,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         table_centro.style = 'Table Grid'
         add_row(table_centro, "1.2 Información centro de trabajo")
         add_row(table_centro, "CUV / Código IST", row_centro.get('cuv', ''))
-        add_row(table_centro, "Nombre de Local", row_centro.get('nombre_ct', ''))
+        add_row(table_centro, "Nombre de Local", row_centro.get('nombre_ct', '').lower().title())
         add_row(table_centro, "Dirección", row_centro.get('direccion_ct', ''))
         add_row(table_centro, "Comuna", row_centro.get('comuna_ct', ''))
         add_row(table_centro, "Región", row_centro.get('region_ct', ''))
@@ -868,13 +883,13 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         add_row(table_visita, "1.3 Información de la visita")
         #add_row(table_visita, "Motivo de la actividad", row_visita.get('motivo_evaluacion', ''))
         add_row(table_visita, "Motivo de la actividad", "Programa de trabajo")
-        add_row(table_visita, "Fecha actividad de terreno", row_visita.get('fecha_visita', ''))
+        add_row(table_visita,"Fecha actividad de terreno", formatear_fecha(row_visita.get('fecha_visita', '')))
         add_row(table_visita, "Hora actividad de terreno", row_visita.get('hora_visita', ''))
-        add_row(table_visita, "Temperatura ambiental exterior", f"{row_visita.get('temperatura_dia', '')}°C")
+        add_row(table_visita, "Temperatura ambiental exterior", ftemp(row_visita.get('temperatura_dia', ''))+"°C")
         add_row(table_visita, "Fecha emisión informe", "[COMPLETAR]")
-        add_row(table_visita, "Profesional consultor/a de IST", row_visita.get('consultor_ist', ''))
-        add_row(table_visita, "Acompañante empresa", row_visita.get('nombre_personal_visita', ''))
-        add_row(table_visita, "Cargo de la persona que acompaña visita", row_visita.get('cargo_personal_visita', ''))
+        add_row(table_visita, "Profesional consultor/a de IST", row_visita.get('consultor_ist', '').lower().title())
+        add_row(table_visita, "Acompañante empresa", row_visita.get('nombre_personal_visita', '').lower().title())
+        add_row(table_visita, "Cargo de la persona que acompaña visita", row_visita.get('cargo_personal_visita', '').lower().title())
         add_row(table_visita, "Revisor del informe", "[COMPLETAR]")
         add_row(table_visita, "Jefatura responsable IST", "[COMPLETAR]")
         add_row(table_visita, "Destinatario informe", "[COMPLETAR]")
@@ -937,11 +952,11 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             "Área",
             "Estándar confortabilidad",
             "Puesto de trabajo",
-            "Temp. bulbo seco(°C)",
-            "Temp. globo(°C)",
+            "Temp. bulbo seco (°C)",
+            "Temp. globo (°C)",
             "Humedad relativa (%)",
-            "Velocidad del aire(m/s)",
-            "PPD",
+            "Velocidad del aire (m/s)",
+            "PPD (%)",
             "PMV"
         ]
 
@@ -1016,12 +1031,12 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
                 run_1 = paragraph_1.add_run(analisis.upper())
                 run_1.bold = True
                 row_cells[2].text = puesto_trabajo
-                row_cells[3].text = f"{avg_t_bul:.2f}"
-                row_cells[4].text = f"{avg_t_globo:.2f}"
-                row_cells[5].text = f"{avg_hum:.1f}"
-                row_cells[6].text = f"{avg_vel:.2f}"
-                row_cells[7].text = f"{avg_ppd:.2f}"
-                row_cells[8].text = f"{avg_pmv:.2f}"
+                row_cells[3].text = ftemp(f"{avg_t_bul:.1f}")
+                row_cells[4].text = ftemp(f"{avg_t_globo:.1f}")
+                row_cells[5].text = ftemp(f"{avg_hum:.1f}")
+                row_cells[6].text = ftemp(f"{avg_vel:.2f}")
+                row_cells[7].text = ftemp(f"{avg_ppd:.1f}")
+                row_cells[8].text = ftemp(f"{avg_pmv:.2f}")
 
             else:
                 # Solo hay una medición en el área, la usamos directamente
@@ -1044,12 +1059,12 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
                 run_1 = paragraph_1.add_run(analisis.upper())
                 run_1.bold = True
                 row_cells[2].text = puesto_trabajo
-                row_cells[3].text = f"{t_bul:.2f}"
-                row_cells[4].text = f"{t_globo:.2f}"
-                row_cells[5].text = f"{hum:.1f}"
-                row_cells[6].text = f"{vel:.2f}"
-                row_cells[7].text = f"{ppd:.2f}"
-                row_cells[8].text = f"{pmv:.2f}"
+                row_cells[3].text = ftemp(f"{t_bul:.1f}")
+                row_cells[4].text = ftemp(f"{t_globo:.1f}")
+                row_cells[5].text = ftemp(f"{hum:.1f}")
+                row_cells[6].text = ftemp(f"{vel:.2f}")
+                row_cells[7].text = ftemp(f"{ppd:.1f}")
+                row_cells[8].text = ftemp(f"{pmv:.2f}")
 
         # Opcional: Ajustar anchos de columna si lo deseas
         set_column_width(tabla_resumen, 0, Cm(3))
@@ -1105,12 +1120,12 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {cumplen_text} "
             f"{'cumple' if len(areas_cumplen) == 1 else 'cumplen'} con el estándar de confort térmico, establecido mediante la metodología de Fanger. "
             f"Esto significa que, al registrarse un PMV entre -1 y +1, el PPD, que expresa el porcentaje de personas que experimentan disconfort con la temperatura, "
-            f"resulta inferior al 25%. Por ello, se recomienda mantener las condiciones actuales o similares."
+            f"resulta inferior al 25%. Por ello, se recomienda mantener y/o mejorar las condiciones actuales o similares."
         )
         doc.add_paragraph()
         doc.add_paragraph(
             f"Respecto de {no_cumplen_text} {'NO cumple' if len(areas_no_cumplen) == 1 else 'NO cumplen'} con el mismo estándar, ya que el PMV se encuentra fuera del rango de -1 a +1, "
-            f"lo que implica que el PPD resulta superior al 25%. Por lo tanto, se deben adoptar las medidas correctivas para alcanzar las condiciones de confort deseadas."
+            f"lo que implica que el PPD resulta superior al 25%. Por lo tanto, se deben adoptar las medidas correctivas para alcanzar los estándares en la referencia técnica."
         )
     elif cumplen_text and not no_cumplen_text:
         # Caso 1: Sólo existen áreas que cumplen.
@@ -1118,7 +1133,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {cumplen_text} "
             f"{'cumple' if len(areas_cumplen) == 1 else 'cumplen'} con el estándar de confort térmico, establecido mediante la metodología de Fanger. "
             f"Esto significa que, al registrarse un PMV entre -1 y +1, el PPD, que expresa el porcentaje de personas que experimentan disconfort con la temperatura, "
-            f"resulta inferior al 25%. Por ello, se recomienda mantener las condiciones actuales o similares."
+            f"resulta inferior al 25%. Por ello, se recomienda mantener y/o mejorar las condiciones actuales o similares."
         )
     elif no_cumplen_text and not cumplen_text:
         # Caso 3: Sólo existen áreas que no cumplen.
@@ -1126,7 +1141,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {no_cumplen_text} "
             f"{'NO cumple' if len(areas_no_cumplen) == 1 else 'NO cumplen'} con el estándar de confort térmico, establecido mediante la metodología de Fanger. "
             f"Esto significa que, al registrarse un PMV fuera del rango de -1 a +1, el PPD, que expresa el porcentaje de personas que experimentan disconfort con la temperatura, "
-            f"resulta superior al 25%. Por lo tanto, se deben adoptar las medidas correctivas para alcanzar las condiciones de confort deseadas."
+            f"resulta superior al 25%. Por lo tanto, se deben adoptar las medidas correctivas para alcanzar los estándares en la referencia técnica"
         )
     else:
         # En caso de que no haya información suficiente
@@ -1284,23 +1299,23 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         # Para TBS
         row_cells = table_calib.add_row().cells
         row_cells[0].text = "TBS"
-        row_cells[1].text = str(row_visita.get('patron_tbs', ''))
-        row_cells[2].text = str(row_visita.get('ver_tbs_ini', ''))
-        row_cells[3].text = str(row_visita.get('ver_tbs_fin', ''))
+        row_cells[1].text = ftemp(row_visita.get('patron_tbs', ''))
+        row_cells[2].text = ftemp(row_visita.get('ver_tbs_ini', ''))
+        row_cells[3].text = ftemp(row_visita.get('ver_tbs_fin', ''))
 
         # Para TBH
         row_cells = table_calib.add_row().cells
         row_cells[0].text = "TBH"
-        row_cells[1].text = str(row_visita.get('patron_tbh', ''))
-        row_cells[2].text = str(row_visita.get('ver_tbh_ini', ''))
-        row_cells[3].text = str(row_visita.get('ver_tbh_fin', ''))
+        row_cells[1].text = ftemp(row_visita.get('patron_tbh', ''))
+        row_cells[2].text = ftemp(row_visita.get('ver_tbh_ini', ''))
+        row_cells[3].text = ftemp(row_visita.get('ver_tbh_fin', ''))
 
         # Para TG
         row_cells = table_calib.add_row().cells
         row_cells[0].text = "TG"
-        row_cells[1].text = str(row_visita.get('patron_tg', ''))
-        row_cells[2].text = str(row_visita.get('ver_tg_ini', ''))
-        row_cells[3].text = str(row_visita.get('ver_tg_fin', ''))
+        row_cells[1].text = ftemp(row_visita.get('patron_tg', ''))
+        row_cells[2].text = ftemp(row_visita.get('ver_tg_ini', ''))
+        row_cells[3].text = ftemp(row_visita.get('ver_tg_fin', ''))
     else:
         # Si no hay información, se agrega una fila de error
         row_cells = table_calib.add_row().cells
