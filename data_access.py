@@ -86,3 +86,93 @@ def get_all_cuvs_with_visits():
     df = pd.read_sql(query, connection)
     connection.close()
     return df['cuv_visita'].tolist()
+
+
+def insertar_visita(cuv, fecha_visita, hora_medicion, temp_max, motivo_evaluacion,
+                    nombre_personal, cargo, consultor_ist, cod_equipo_t, cod_equipo_v,
+                    patron_tbs, verif_tbs_inicial, patron_tbh, verif_tbh_inicial,
+                    patron_tg, verif_tg_inicial):
+    """
+    Inserta una nueva visita en la tabla higiene_Visitas y retorna el id_visita generado.
+
+    - Busca los valores de id_equipo en higiene_Equipos_Medicion para los códigos de equipo (cod_equipo_t y cod_equipo_v).
+    - Inserta los datos de la visita en la base de datos.
+    - Retorna el id_visita generado.
+
+    Parámetros:
+    - cuv: str -> Código único de visita.
+    - fecha_visita: date -> Fecha de la visita.
+    - hora_medicion: time -> Hora de la medición.
+    - temp_max: float -> Temperatura máxima del día.
+    - motivo_evaluacion: str -> Motivo de evaluación.
+    - nombre_personal: str -> Nombre del personal SMU.
+    - cargo: str -> Cargo del personal.
+    - consultor_ist: str -> Consultor a cargo.
+    - cod_equipo_t: str -> Código del equipo de temperatura (valor de equipo_dicc).
+    - cod_equipo_v: str -> Código del equipo de velocidad de aire (valor de equipo_dicc).
+    - patron_tbs: float -> Valor patrón de temperatura de bulbo seco.
+    - verif_tbs_inicial: float -> Verificación inicial de TBS.
+    - patron_tbh: float -> Valor patrón de temperatura de bulbo húmedo.
+    - verif_tbh_inicial: float -> Verificación inicial de TBH.
+    - patron_tg: float -> Valor patrón de temperatura globo.
+    - verif_tg_inicial: float -> Verificación inicial de TG.
+
+    Retorna:
+    - id_visita generado (int) si la inserción es exitosa, None en caso de error.
+    """
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    try:
+        # Buscar id_equipo para cod_equipo_t
+        cursor.execute("SELECT id_equipo FROM higiene_Equipos_Medicion WHERE equipo_dicc = ?", (cod_equipo_t,))
+        row_temp = cursor.fetchone()
+        id_equipo_t = row_temp[0] if row_temp else None
+
+        # Buscar id_equipo para cod_equipo_v
+        cursor.execute("SELECT id_equipo FROM higiene_Equipos_Medicion WHERE equipo_dicc = ?", (cod_equipo_v,))
+        row_vel = cursor.fetchone()
+        id_equipo_v = row_vel[0] if row_vel else None
+
+        # Validar que ambos equipos existan en la base de datos
+        if id_equipo_t is None or id_equipo_v is None:
+            logging.error(f"No se encontraron equipos en higiene_Equipos_Medicion para: "
+                          f"T={cod_equipo_t}, V={cod_equipo_v}")
+            return None
+
+        # Insertar la visita en higiene_Visitas
+        insert_query = """
+        INSERT INTO higiene_Visitas_prod (
+            cuv_visita, fecha_visita, hora_visita, temperatura_dia, motivo_evaluacion,
+            nombre_personal_visita, cargo_personal_visita, consultor_ist,
+            equipo_temp, equipo_vel_air, patron_tbs, ver_tbs_ini, 
+            patron_tbh, ver_tbh_ini, patron_tg, ver_tg_ini
+        ) 
+        OUTPUT INSERTED.id_visita
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        cursor.execute(insert_query, (
+            cuv, fecha_visita, hora_medicion, temp_max, motivo_evaluacion,
+            nombre_personal, cargo, consultor_ist, id_equipo_t, id_equipo_v,
+            patron_tbs, verif_tbs_inicial, patron_tbh, verif_tbh_inicial,
+            patron_tg, verif_tg_inicial
+        ))
+
+        # Obtener el id_visita generado
+        id_visita = cursor.fetchone()[0]
+
+        # Confirmar la transacción
+        connection.commit()
+        logging.info(f"Visita insertada exitosamente con id_visita: {id_visita}")
+
+        return id_visita
+
+    except pyodbc.Error as e:
+        logging.error(f"Error al insertar la visita: {e}")
+        connection.rollback()
+        return None
+
+    finally:
+        cursor.close()
+        connection.close()

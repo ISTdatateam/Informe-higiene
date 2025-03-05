@@ -1,11 +1,21 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date, time
-
-from data_access2 import get_data  # Función que obtiene el CSV principal
+from data_access2 import get_data   # Función que obtiene el CSV principal
+from data_access import insertar_visita   # Función que obtiene el CSV principal
 from doc_utils import generar_informe_en_word  # Función para generar el Word
-
 from pythermalcomfort.models import pmv_ppd_iso
+import zipfile
+import io
+from data_access import (
+    get_centro,
+    get_visita,
+    get_mediciones,
+    get_equipos,
+    get_all_cuvs_with_visits  # Si también deseas agregar la generación masiva
+)
+from doc_utils import generar_informe_en_word
+from informe import generar_informe_desde_cuv
 
 st.set_page_config(page_title="Informes Confort Térmico", layout="wide")
 
@@ -108,12 +118,57 @@ def main():
             consultor_ist = st.text_input("Consultor IST")
             st.markdown("#### Verificación de parámetros")
             cod_equipo_t = st.selectbox("Equipo temperatura",
-                                        options=["Seleccione...", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8", "T9", "T10",
-                                                 "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18", "T19", "T20"],
+                                        options=["Seleccione...",
+                                                 "T1",
+                                                 "T2",
+                                                 "T3",
+                                                 "T4",
+                                                 "T5",
+                                                 "T6",
+                                                 "T7",
+                                                 "T8",
+                                                 "T9",
+                                                 "T10",
+                                                 "T11",
+                                                 "T12",
+                                                 "T13",
+                                                 "T14",
+                                                 "T15",
+                                                 "T16",
+                                                 "T17",
+                                                 "T18",
+                                                 "T19",
+                                                 "T20",
+                                                 "T21",
+                                                 "T22",
+                                                 "T23",
+                                                 "T24",
+                                                 "T25",
+                                                 "T26",
+                                                 "T27",
+                                                 "T28",
+                                                 "T29",
+                                                 "T30",
+                                                 "T31",
+                                                 "T32"],
                                         index=0)
             cod_equipo_v = st.selectbox("Equipo velocidad aire",
-                                        options=["Seleccione...", "V1", "V2", "V3", "V4", "V5", "V6", "V7", "V8", "V9", "V10",
-                                                 "V11", "V12", "V13", "V14", "V15"],
+                                        options=["V1",
+                                                 "V2",
+                                                 "V3",
+                                                 "V4",
+                                                 "V5",
+                                                 "V6",
+                                                 "V7",
+                                                 "V8",
+                                                 "V9",
+                                                 "V10",
+                                                 "V11",
+                                                 "V12",
+                                                 "V13",
+                                                 "V14",
+                                                 "V15",
+                                                 ],
                                         index=0)
             patron_tbs = st.number_input("Patrón TBS", value=46.4, step=0.1)
             verif_tbs_inicial = st.number_input("Verificación TBS inicial", step=0.1)
@@ -140,12 +195,32 @@ def main():
                 "Patrón TG": patron_tg,
                 "Verificación TG inicial": verif_tg_inicial
             }
-            # Asignamos las claves directas para que el form3 pueda acceder a ellas.
-            st.session_state["verif_tbs_inicial"] = verif_tbs_inicial
-            st.session_state["verif_tbh_inicial"] = verif_tbh_inicial
-            st.session_state["verif_tg_inicial"] = verif_tg_inicial
 
-            st.success("Formulario 1 guardado.")
+            # Guardar la visita en la base de datos
+            id_visita = insertar_visita(
+                st.session_state["input_cuv_str"],
+                fecha_visita,
+                hora_medicion,
+                temp_max,
+                motivo_evaluacion,
+                nombre_personal,
+                cargo,
+                consultor_ist,
+                cod_equipo_t,
+                cod_equipo_v,
+                patron_tbs,
+                verif_tbs_inicial,
+                patron_tbh,
+                verif_tbh_inicial,
+                patron_tg,
+                verif_tg_inicial
+            )
+
+            if id_visita:
+                st.session_state["id_visita"] = id_visita
+                st.success(f"Visita guardada con éxito. ID de la visita: {id_visita}")
+            else:
+                st.error("Error al guardar la visita en la base de datos.")
 
         # 3. Formulario 2: Mediciones de Áreas (Formularios Independientes)
         st.subheader("Mediciones de Áreas")
@@ -419,6 +494,24 @@ def main():
                 "Comentarios finales de evaluación": comentarios_finales
             }
             st.success("Formulario 3 guardado.")
+
+        #INFORME
+        if st.session_state["cierre"]:
+            st.subheader("Generar Informe")
+            st.write("Los datos han sido guardados. ¿Deseas generar el informe basado en la base de datos?")
+
+            if st.button("Sí, generar informe automáticamente"):
+                cuv = st.session_state.get("input_cuv_str", "")
+                informe_docx = generar_informe_desde_cuv(cuv)
+
+                if informe_docx:
+                    st.success("Informe generado correctamente.")
+                    st.download_button(
+                        label="Descargar Informe",
+                        data=informe_docx,
+                        file_name=f"informe_{cuv}.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    )
 
         # 5. Informe y Calculadora de Confort
         st.markdown("---")
