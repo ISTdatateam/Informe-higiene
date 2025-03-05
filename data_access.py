@@ -176,3 +176,39 @@ def insertar_visita(cuv, fecha_visita, hora_medicion, temp_max, motivo_evaluacio
     finally:
         cursor.close()
         connection.close()
+
+def insert_verif_final_visita(id_visita, verif_tbs_final, verif_tbh_final, verif_tg_final, comentarios_finales):
+    """
+    Actualiza los valores de verificación final en la tabla higiene_Visitas_prod
+    usando el id_visita.
+    """
+
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    try:
+        sql = """
+        UPDATE higiene_Visitas_prod
+        SET ver_tbs_fin = ?, 
+            ver_tbh_fin = ?, 
+            ver_tg_fin = ?, 
+            note_visita = ?
+        WHERE id_visita = ?
+        """
+
+        cursor.execute(sql, (verif_tbs_final, verif_tbh_final, verif_tg_final, comentarios_finales, id_visita))
+        connection.commit()
+
+        if cursor.rowcount > 0:
+            logging.info(f"Registro de id_visita {id_visita} actualizado correctamente.")
+            return True
+        else:
+            logging.warning(f"No se encontró el registro con id_visita {id_visita} o los datos no cambiaron.")
+            return False
+
+    except Exception as e:
+        logging.error(f"Error al actualizar la visita {id_visita}: {e}")
+        return False
+
+    finally:
+        connection.close()
