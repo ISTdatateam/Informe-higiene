@@ -842,7 +842,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         table_empresa = doc.add_table(rows=0, cols=2)
         table_empresa.style = 'Table Grid'
         add_row(table_empresa, "1.1 Información empresa")
-        add_row(table_empresa, "Razón Social", row_centro.get('razon_social', ''))
+        add_row(table_empresa, "Razón Social", row_centro.get('razon_social', '').str.lower().str.capitalize)
         add_row(table_empresa, "RUT", row_centro.get('rut', ''))
         add_row(table_empresa, "CIIU", row_centro.get('CIIU', '[COMPLETAR]'))
 
