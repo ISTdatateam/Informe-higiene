@@ -482,6 +482,30 @@ def agregar_contenido(cell, items):
         p_element.getparent().remove(p_element)
 
 
+def agregar_medidas_por_accion(table, medidas):
+    """
+    Agrega filas a la tabla para cada medida.
+    Por cada acción de cada medida, se crea una fila nueva,
+    manteniendo el contenido de 'areas' y 'plazo' en cada fila.
+    """
+    for medida in medidas:
+        for accion in medida['acciones']:
+            row_cells = table.add_row().cells
+            # Agrega el contenido de 'areas' en la primera celda.
+            agregar_contenido(row_cells[0], medida['areas'])
+            # Agrega la acción actual en la segunda celda (se pasa en forma de lista).
+            agregar_contenido(row_cells[1], [accion])
+            # Asigna el plazo en la tercera celda.
+            row_cells[2].text = medida['plazo']
+            # Formatea verticalmente centrado cada celda.
+            for cell in row_cells:
+                cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+    return table
+
+
+
+
+
 ####
 # Añade al final de doc_utils.py
 
@@ -626,6 +650,9 @@ def crear_tabla_recomendaciones(doc, tipo_medida, medidas):
         hdr_cells[idx].text = header
     format_row(table.rows[0], shading_color="4F0B7B")  # Morado corporativo
 
+    table = agregar_medidas_por_accion(table, medidas)
+
+    '''
     # Llenar con medidas
     for medida in medidas:
         row_cells = table.add_row().cells
@@ -636,6 +663,7 @@ def crear_tabla_recomendaciones(doc, tipo_medida, medidas):
         for cell in row_cells:
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
     return table
+    '''
 
 def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
     # 1. Medidas Ingenieriles (solo para áreas no conformes)
@@ -713,8 +741,7 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
             'areas': ['Todas'],
             'acciones': [
                 "- Informar a cada persona trabajadora acerca de los riesgos que entrañan sus labores, de las medidas preventivas, de los métodos y/o procedimientos de trabajo correctos, acorde a lo identificado por la empresa. Además de lo señalado previamente, la entidad empleadora deberá informar de manera oportuna y adecuada el resultado del presente informe técnico.",
-                "- Complementario a lo anterior, se deberán realizar capacitaciones (teóricas/prácticas) periódicas en prevención de riesgos laborales, con la finalidad de garantizar el aprendizaje efectivo y eficaz, dejando registro de dichas capacitaciones y evaluaciones.",
-                "- Lo señalado previamente se enmarca en los artículos 15° y 16° del Párrafo IV del D.S 44 “Aprueba nuevo reglamento sobre gestión preventiva de los riesgos laborales para un entorno de trabajo seguro y saludable."
+                "- Realizar capacitaciones (teóricas/prácticas) periódicas en prevención de riesgos laborales, con la finalidad de garantizar el aprendizaje efectivo y eficaz, dejando registro de dichas capacitaciones y evaluaciones. En el marco de los artículos 15° y 16° del Párrafo IV del D.S 44 “Aprueba nuevo reglamento sobre gestión preventiva de los riesgos laborales para un entorno de trabajo seguro y saludable."
             ],
             'plazo': '30 días desde la recepción del presente informe técnico'
         },
@@ -839,7 +866,8 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         table_visita = doc.add_table(rows=0, cols=2)
         table_visita.style = 'Table Grid'
         add_row(table_visita, "1.3 Información de la visita")
-        add_row(table_visita, "Motivo de la actividad", row_visita.get('motivo_evaluacion', ''))
+        #add_row(table_visita, "Motivo de la actividad", row_visita.get('motivo_evaluacion', ''))
+        add_row(table_visita, "Motivo de la actividad", "Programa de trabajo")
         add_row(table_visita, "Fecha actividad de terreno", row_visita.get('fecha_visita', ''))
         add_row(table_visita, "Hora actividad de terreno", row_visita.get('hora_visita', ''))
         add_row(table_visita, "Temperatura ambiental exterior", f"{row_visita.get('temperatura_dia', '')}°C")
@@ -1069,6 +1097,68 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
             no_cumplen_text = None
 
         # Generar la redacción final de las conclusiones
+
+    # Generar la redacción final de las conclusiones
+    if cumplen_text and no_cumplen_text:
+        # Caso 2: Existen áreas que cumplen y áreas que no cumplen.
+        doc.add_paragraph(
+            f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {cumplen_text} "
+            f"{'cumple' if len(areas_cumplen) == 1 else 'cumplen'} con el estándar de confort térmico, establecido mediante la metodología de Fanger. "
+            f"Esto significa que, al registrarse un PMV entre -1 y +1, el PPD, que expresa el porcentaje de personas que experimentan disconfort con la temperatura, "
+            f"resulta inferior al 25%. Por ello, se recomienda mantener las condiciones actuales o similares."
+        )
+        doc.add_paragraph()
+        doc.add_paragraph(
+            f"Respecto de {no_cumplen_text} {'NO cumple' if len(areas_no_cumplen) == 1 else 'NO cumplen'} con el mismo estándar, ya que el PMV se encuentra fuera del rango de -1 a +1, "
+            f"lo que implica que el PPD resulta superior al 25%. Por lo tanto, se deben adoptar las medidas correctivas para alcanzar las condiciones de confort deseadas."
+        )
+    elif cumplen_text and not no_cumplen_text:
+        # Caso 1: Sólo existen áreas que cumplen.
+        doc.add_paragraph(
+            f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {cumplen_text} "
+            f"{'cumple' if len(areas_cumplen) == 1 else 'cumplen'} con el estándar de confort térmico, establecido mediante la metodología de Fanger. "
+            f"Esto significa que, al registrarse un PMV entre -1 y +1, el PPD, que expresa el porcentaje de personas que experimentan disconfort con la temperatura, "
+            f"resulta inferior al 25%. Por ello, se recomienda mantener las condiciones actuales o similares."
+        )
+    elif no_cumplen_text and not cumplen_text:
+        # Caso 3: Sólo existen áreas que no cumplen.
+        doc.add_paragraph(
+            f"Efectuadas mediciones de confort térmico en el local {nombre_ct}, se concluye que {no_cumplen_text} "
+            f"{'NO cumple' if len(areas_no_cumplen) == 1 else 'NO cumplen'} con el estándar de confort térmico, establecido mediante la metodología de Fanger. "
+            f"Esto significa que, al registrarse un PMV fuera del rango de -1 a +1, el PPD, que expresa el porcentaje de personas que experimentan disconfort con la temperatura, "
+            f"resulta superior al 25%. Por lo tanto, se deben adoptar las medidas correctivas para alcanzar las condiciones de confort deseadas."
+        )
+    else:
+        # En caso de que no haya información suficiente
+        doc.add_paragraph(
+            "No se encontró información suficiente en las mediciones para emitir una conclusión sobre el confort térmico."
+        )
+
+    '''
+    if not df_centros.empty:
+        row_centro = df_centros.iloc[0]
+        nombre_ct = row_centro.get("nombre_ct", "")
+        # Construir las cadenas de texto según las áreas que cumplen y las que no cumplen
+
+        if areas_cumplen:
+            if len(areas_cumplen) == 1:
+                # Forma singular
+                cumplen_text = f"el área de {areas_cumplen[0]}"
+            else:
+                # Forma plural, usando la función para unir con "y"
+                cumplen_text = f"las áreas {join_with_and(areas_cumplen)}"
+        else:
+            cumplen_text = None  # O dejarlo en cadena vacía, según convenga
+
+        if areas_no_cumplen:
+            if len(areas_no_cumplen) == 1:
+                no_cumplen_text = f"el área {areas_no_cumplen[0]}"
+            else:
+                no_cumplen_text = f"las áreas {join_with_and(areas_no_cumplen)}"
+        else:
+            no_cumplen_text = None
+
+        # Generar la redacción final de las conclusiones
         if cumplen_text and no_cumplen_text:
             # Caso 2: Existen áreas que cumplen y áreas que no cumplen.
             doc.add_paragraph(
@@ -1096,38 +1186,39 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
                 "No se encontró información suficiente en las mediciones para emitir una conclusión sobre el confort térmico."
             )
 
+    '''
 
     # -------------------------------
     # 4) MEDIDAS CORRECTIVAS
     # -------------------------------
 
-        paragraph = doc.add_heading("4. Prescripción de medidas", level=2)
-        paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    paragraph = doc.add_heading("4. Prescripción de medidas", level=2)
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
-        # Asumiendo que row_centro ya está definido y contiene la información de la empresa:
-        razon_social = row_centro.get('razon_social', 'RENDIC HERMANOS S.A.')
+    # Asumiendo que row_centro ya está definido y contiene la información de la empresa:
+    razon_social = row_centro.get('razon_social', 'RENDIC HERMANOS S.A.')
 
-        # Luego, en el cuerpo del documento:
-        doc.add_paragraph(
-            "Conforme al artículo 68 de la Ley N° 16.744, la implementación de las medidas prescritas por este organismo "
-            "administrador es de carácter obligatoria, por lo que su incumplimiento podrá ser sancionado con el recargo de "
-            "la cotización adicional diferenciada, sin perjuicio de las demás sanciones que correspondan."
-        )
-        doc.add_paragraph()
-        doc.add_paragraph(
-            f"No obstante, {razon_social} podrá implementar otras medidas técnicas y/o administrativas equivalentes a las "
-            "señaladas en el presente informe y que contribuyan a disminuir la exposición de sus trabajadores, debiendo "
-            "informar a IST, quien evaluará su efectividad una vez implementadas. Adicionalmente, en el caso de que las áreas "
-            "de trabajo sean operadas por contratistas, el mandante debe informar obligatoriamente a todos sus contratistas los "
-            "riesgos a los que están expuestos."
-        )
-        doc.add_paragraph()
-        doc.add_paragraph(
-            "Acorde a las condiciones existentes al momento de las mediciones, al resultado de las mismas y a las conclusiones "
-            "obtenidas, se establecen las siguientes medidas de control:"
-        )
+    # Luego, en el cuerpo del documento:
+    doc.add_paragraph(
+        "Conforme al artículo 68 de la Ley N° 16.744, la implementación de las medidas prescritas por este organismo "
+        "administrador es de carácter obligatoria, por lo que su incumplimiento podrá ser sancionado con el recargo de "
+        "la cotización adicional diferenciada, sin perjuicio de las demás sanciones que correspondan."
+    )
+    doc.add_paragraph()
+    doc.add_paragraph(
+        f"No obstante, {razon_social} podrá implementar otras medidas técnicas y/o administrativas equivalentes a las "
+        "señaladas en el presente informe y que contribuyan a disminuir la exposición de sus trabajadores, debiendo "
+        "informar a IST, quien evaluará su efectividad una vez implementadas. Adicionalmente, en el caso de que las áreas "
+        "de trabajo sean operadas por contratistas, el mandante debe informar obligatoriamente a todos sus contratistas los "
+        "riesgos a los que están expuestos."
+    )
+    doc.add_paragraph()
+    doc.add_paragraph(
+        "Acorde a las condiciones existentes al momento de las mediciones, al resultado de las mismas y a las conclusiones "
+        "obtenidas, se establecen las siguientes medidas de control:"
+    )
 
-        agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen)
+    agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen)
 
     doc.add_paragraph()
 
@@ -1166,8 +1257,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     # Agregar párrafo para el zonal, centrado
     p_zonal = doc.add_paragraph("[__COMPLETAR_ZONAL__]")
     p_zonal.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-
 
 
     # -------------------------------
