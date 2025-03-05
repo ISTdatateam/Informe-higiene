@@ -212,3 +212,85 @@ def insert_verif_final_visita(id_visita, verif_tbs_final, verif_tbh_final, verif
 
     finally:
         connection.close()
+
+
+def insertar_medicion(visita_id, nombre_area, sector_especifico, puesto_trabajo,
+                      posicion_trabajador, vestimenta_trabajador, t_bul_seco, t_globo,
+                      hum_rel, vel_air, ppd, pmv, resultado_medicion, cond_techumbre,
+                      obs_techumbre, cond_paredes, obs_paredes, cond_vantanal, obs_ventanal,
+                      cond_aire_acond, obs_aire_acond, cond_ventiladores, obs_ventiladores,
+                      cond_inyeccion_extraccion, obs_inyeccion_extraccion, cond_ventanas,
+                      obs_ventanas, cond_puertas, obs_puertas, cond_otras, obs_otras, met, clo):
+    """
+    Inserta una medición en la tabla higiene_mediciones_prod y retorna el id_medicion generado.
+
+    Parámetros:
+    - visit_id (int): ID de la visita a la que pertenece la medición.
+    - nombre_area (str): Nombre del área de medición.
+    - sector_especifico (str): Sector específico de la medición.
+    - puesto_trabajo (str): Puesto de trabajo medido.
+    - posicion_trabajador (str): Posición del trabajador (De pie/Sentado).
+    - vestimenta_trabajador (str): Tipo de vestimenta del trabajador.
+    - t_bul_seco (float): Temperatura bulbo seco (°C).
+    - t_globo (float): Temperatura globo (°C).
+    - hum_rel (float): Humedad relativa (%).
+    - vel_air (float): Velocidad del aire (m/s).
+    - ppd (float): Índice de Predicción de Porcentaje de Personas Insatisfechas.
+    - pmv (float): Índice de Voto Medio Predicho.
+    - resultado_medicion (str): Interpretación del PMV.
+    - cond_techumbre, obs_techumbre, cond_paredes, obs_paredes, cond_vantanal, obs_ventanal,
+      cond_aire_acond, obs_aire_acond, cond_ventiladores, obs_ventiladores,
+      cond_inyeccion_extraccion, obs_inyeccion_extraccion, cond_ventanas, obs_ventanas,
+      cond_puertas, obs_puertas (str): Condiciones y observaciones constructivas del área.
+    - met (float): Nivel metabólico del trabajador.
+    - clo (float): Nivel de aislamiento térmico de la vestimenta.
+    - caract_constructivas (str): Características constructivas del área.
+    - ingreso_salida_aire (str): Descripción de ingreso/salida de aire.
+
+    Retorna:
+    - id_medicion (int): ID generado de la medición insertada, o None en caso de error.
+    """
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    try:
+        # Validación de parámetros
+        if not visita_id or nombre_area == "Seleccione..." or sector_especifico == "Seleccione..." or puesto_trabajo == "Seleccione...":
+            logging.error("Datos de medición incompletos. No se insertará en la base de datos.")
+            return None
+
+        # Query de inserción con OUTPUT para obtener el ID generado
+        insert_query = """
+        INSERT INTO higiene_mediciones_prod (
+            visita_id, nombre_area, sector_especifico, puesto_trabajo, posicion_trabajador, vestimenta_trabajador,
+            t_bul_seco, t_globo, hum_rel, vel_air, ppd, pmv, resultado_medicion, cond_techumbre, obs_techumbre,
+            cond_paredes, obs_paredes, cond_vantanal, obs_ventanal, cond_aire_acond, obs_aire_acond,
+            cond_ventiladores, obs_ventiladores, cond_inyeccion_extraccion, obs_inyeccion_extraccion,
+            cond_ventanas, obs_ventanas, cond_puertas, obs_puertas, cond_otras, obs_otras, met, clo
+        ) 
+        OUTPUT INSERTED.id_medicion
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        cursor.execute(insert_query, (
+            visita_id, nombre_area, sector_especifico, puesto_trabajo, posicion_trabajador, vestimenta_trabajador,
+            t_bul_seco, t_globo, hum_rel, vel_air, ppd, pmv, resultado_medicion, cond_techumbre, obs_techumbre,
+            cond_paredes, obs_paredes, cond_vantanal, obs_ventanal, cond_aire_acond, obs_aire_acond,
+            cond_ventiladores, obs_ventiladores, cond_inyeccion_extraccion, obs_inyeccion_extraccion,
+            cond_ventanas, obs_ventanas, cond_puertas, obs_puertas, cond_otras, obs_otras, met, clo
+        ))
+
+        id_medicion = cursor.fetchone()[0]  # Obtener el ID insertado
+        connection.commit()
+        logging.info(f"Medición insertada con éxito. ID: {id_medicion}")
+
+        return id_medicion
+
+    except pyodbc.Error as e:
+        logging.error(f"Error al insertar la medición: {e}")
+        connection.rollback()
+        return None
+
+    finally:
+        cursor.close()
+        connection.close()
