@@ -50,7 +50,7 @@ def get_visita(cuv: str) -> pd.DataFrame:
     """
     connection = get_db_connection()
     query = """
-        SELECT * FROM higiene_Visitas 
+        SELECT * FROM higiene_Visitas
         WHERE cuv_visita = ? 
         ORDER BY fecha_visita DESC, hora_visita DESC
     """
@@ -63,7 +63,7 @@ def get_mediciones(visita_id: int) -> pd.DataFrame:
     Obtiene las mediciones de la tabla higiene_Mediciones asociadas a la visita indicada.
     """
     connection = get_db_connection()
-    query = "SELECT * FROM higiene_Mediciones WHERE visita_id = ?"
+    query = "SELECT * FROM higiene_mediciones WHERE visita_id = ?"
     # Convertimos visita_id a entero (tipo int) para evitar el error de parámetro
     df = pd.read_sql(query, connection, params=[int(visita_id)])
     connection.close()
@@ -91,78 +91,45 @@ def get_all_cuvs_with_visits():
 def insertar_visita(cuv, fecha_visita, hora_medicion, temp_max, motivo_evaluacion,
                     nombre_personal, cargo, consultor_ist, cod_equipo_t, cod_equipo_v,
                     patron_tbs, verif_tbs_inicial, patron_tbh, verif_tbh_inicial,
-                    patron_tg, verif_tg_inicial):
-    """
-    Inserta una nueva visita en la tabla higiene_Visitas y retorna el id_visita generado.
+                    patron_tg, verif_tg_inicial, consultor_cargo, consultor_zonal):
 
-    - Busca los valores de id_equipo en higiene_Equipos_Medicion para los códigos de equipo (cod_equipo_t y cod_equipo_v).
-    - Inserta los datos de la visita en la base de datos.
-    - Retorna el id_visita generado.
-
-    Parámetros:
-    - cuv: str -> Código único de visita.
-    - fecha_visita: date -> Fecha de la visita.
-    - hora_medicion: time -> Hora de la medición.
-    - temp_max: float -> Temperatura máxima del día.
-    - motivo_evaluacion: str -> Motivo de evaluación.
-    - nombre_personal: str -> Nombre del personal SMU.
-    - cargo: str -> Cargo del personal.
-    - consultor_ist: str -> Consultor a cargo.
-    - cod_equipo_t: str -> Código del equipo de temperatura (valor de equipo_dicc).
-    - cod_equipo_v: str -> Código del equipo de velocidad de aire (valor de equipo_dicc).
-    - patron_tbs: float -> Valor patrón de temperatura de bulbo seco.
-    - verif_tbs_inicial: float -> Verificación inicial de TBS.
-    - patron_tbh: float -> Valor patrón de temperatura de bulbo húmedo.
-    - verif_tbh_inicial: float -> Verificación inicial de TBH.
-    - patron_tg: float -> Valor patrón de temperatura globo.
-    - verif_tg_inicial: float -> Verificación inicial de TG.
-
-    Retorna:
-    - id_visita generado (int) si la inserción es exitosa, None en caso de error.
-    """
     connection = get_db_connection()
     cursor = connection.cursor()
 
     try:
-        # Buscar id_equipo para cod_equipo_t
         cursor.execute("SELECT id_equipo FROM higiene_Equipos_Medicion WHERE equipo_dicc = ?", (cod_equipo_t,))
         row_temp = cursor.fetchone()
         id_equipo_t = row_temp[0] if row_temp else None
 
-        # Buscar id_equipo para cod_equipo_v
         cursor.execute("SELECT id_equipo FROM higiene_Equipos_Medicion WHERE equipo_dicc = ?", (cod_equipo_v,))
         row_vel = cursor.fetchone()
         id_equipo_v = row_vel[0] if row_vel else None
 
-        # Validar que ambos equipos existan en la base de datos
         if id_equipo_t is None or id_equipo_v is None:
             logging.error(f"No se encontraron equipos en higiene_Equipos_Medicion para: "
                           f"T={cod_equipo_t}, V={cod_equipo_v}")
             return None
 
-        # Insertar la visita en higiene_Visitas
         insert_query = """
         INSERT INTO higiene_Visitas_prod (
             cuv_visita, fecha_visita, hora_visita, temperatura_dia, motivo_evaluacion,
             nombre_personal_visita, cargo_personal_visita, consultor_ist,
             equipo_temp, equipo_vel_air, patron_tbs, ver_tbs_ini, 
-            patron_tbh, ver_tbh_ini, patron_tg, ver_tg_ini
+            patron_tbh, ver_tbh_ini, patron_tg, ver_tg_ini, consultor_cargo, consultor_zonal
         ) 
         OUTPUT INSERTED.id_visita
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """
 
         cursor.execute(insert_query, (
             cuv, fecha_visita, hora_medicion, temp_max, motivo_evaluacion,
             nombre_personal, cargo, consultor_ist, id_equipo_t, id_equipo_v,
             patron_tbs, verif_tbs_inicial, patron_tbh, verif_tbh_inicial,
-            patron_tg, verif_tg_inicial
+            patron_tg, verif_tg_inicial, consultor_cargo, consultor_zonal
         ))
 
-        # Obtener el id_visita generado
         id_visita = cursor.fetchone()[0]
 
-        # Confirmar la transacción
         connection.commit()
         logging.info(f"Visita insertada exitosamente con id_visita: {id_visita}")
 
@@ -178,11 +145,6 @@ def insertar_visita(cuv, fecha_visita, hora_medicion, temp_max, motivo_evaluacio
         connection.close()
 
 def insert_verif_final_visita(id_visita, verif_tbs_final, verif_tbh_final, verif_tg_final, comentarios_finales):
-    """
-    Actualiza los valores de verificación final en la tabla higiene_Visitas_prod
-    usando el id_visita.
-    """
-
     connection = get_db_connection()
     cursor = connection.cursor()
 
@@ -211,4 +173,56 @@ def insert_verif_final_visita(id_visita, verif_tbs_final, verif_tbh_final, verif
         return False
 
     finally:
+        connection.close()
+
+
+def insertar_medicion(visita_id, nombre_area, sector_especifico, puesto_trabajo,
+                      posicion_trabajador, vestimenta_trabajador, t_bul_seco, t_globo,
+                      hum_rel, vel_air, ppd, pmv, resultado_medicion, cond_techumbre,
+                      obs_techumbre, cond_paredes, obs_paredes, cond_vantanal, obs_ventanal,
+                      cond_aire_acond, obs_aire_acond, cond_ventiladores, obs_ventiladores,
+                      cond_inyeccion_extraccion, obs_inyeccion_extraccion, cond_ventanas,
+                      obs_ventanas, cond_puertas, obs_puertas, cond_otras, obs_otras, met, clo):
+
+    connection = get_db_connection()
+    cursor = connection.cursor()
+
+    try:
+        if not visita_id or nombre_area == "Seleccione..." or sector_especifico == "Seleccione..." or puesto_trabajo == "Seleccione...":
+            logging.error("Datos de medición incompletos. No se insertará en la base de datos.")
+            return None
+
+        insert_query = """
+        INSERT INTO higiene_mediciones_prod (
+            visita_id, nombre_area, sector_especifico, puesto_trabajo, posicion_trabajador, vestimenta_trabajador,
+            t_bul_seco, t_globo, hum_rel, vel_air, ppd, pmv, resultado_medicion, cond_techumbre, obs_techumbre,
+            cond_paredes, obs_paredes, cond_vantanal, obs_ventanal, cond_aire_acond, obs_aire_acond,
+            cond_ventiladores, obs_ventiladores, cond_inyeccion_extraccion, obs_inyeccion_extraccion,
+            cond_ventanas, obs_ventanas, cond_puertas, obs_puertas, cond_otras, obs_otras, met, clo
+        ) 
+        OUTPUT INSERTED.id_medicion
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        cursor.execute(insert_query, (
+            visita_id, nombre_area, sector_especifico, puesto_trabajo, posicion_trabajador, vestimenta_trabajador,
+            t_bul_seco, t_globo, hum_rel, vel_air, ppd, pmv, resultado_medicion, cond_techumbre, obs_techumbre,
+            cond_paredes, obs_paredes, cond_vantanal, obs_ventanal, cond_aire_acond, obs_aire_acond,
+            cond_ventiladores, obs_ventiladores, cond_inyeccion_extraccion, obs_inyeccion_extraccion,
+            cond_ventanas, obs_ventanas, cond_puertas, obs_puertas, cond_otras, obs_otras, met, clo
+        ))
+
+        id_medicion = cursor.fetchone()[0]  # Obtener el ID insertado
+        connection.commit()
+        logging.info(f"Medición insertada con éxito. ID: {id_medicion}")
+
+        return id_medicion
+
+    except pyodbc.Error as e:
+        logging.error(f"Error al insertar la medición: {e}")
+        connection.rollback()
+        return None
+
+    finally:
+        cursor.close()
         connection.close()
