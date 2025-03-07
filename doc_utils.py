@@ -1266,6 +1266,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     run_consultor.bold = True
 
     # Agregar párrafo para la profesión, centrado
+
     p_profesion = doc.add_paragraph("[__COMPLETAR_PROFESIÓN__]")
     p_profesion.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
