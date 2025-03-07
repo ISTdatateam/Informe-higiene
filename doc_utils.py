@@ -1253,11 +1253,13 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     doc.add_paragraph()
     doc.add_paragraph()
     doc.add_paragraph()
-
+    doc.add_paragraph()
 
     if not df_visitas.empty:
         row_visita = df_visitas.iloc[0]
         consultor_ist = row_visita.get("consultor_ist", "")
+        consultor_cargo = row_visita.get("consultor_cargo", "")
+        consultor_zonal = row_visita.get("consultor_zonal", "")
 
     # Agregar párrafo para el consultor, centrado y en negrita
     p_consultor = doc.add_paragraph()
@@ -1266,12 +1268,15 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     run_consultor.bold = True
 
     # Agregar párrafo para la profesión, centrado
-    p_profesion = doc.add_paragraph("[__COMPLETAR_PROFESIÓN__]")
+    p_profesion = doc.add_paragraph()
     p_profesion.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_profesion = p_profesion.add_run(consultor_cargo)
 
     # Agregar párrafo para el zonal, centrado
-    p_zonal = doc.add_paragraph("[__COMPLETAR_ZONAL__]")
+    p_zonal = doc.add_paragraph()
     p_zonal.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run_zonal = p_zonal.add_run(consultor_zonal)
+
 
 
     # -------------------------------
