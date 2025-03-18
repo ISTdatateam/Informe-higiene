@@ -425,7 +425,7 @@ def main():
             st.write("Los datos han sido guardados. ¿Deseas generar el informe basado en la base de datos?")
 
             if st.button("Sí, generar informe automáticamente", key="generar_informe"):
-                cuv = st.session_state.get("input_cuv_str", "")
+                cuv = cuv_val
                 informe_docx = generar_informe_desde_cuv(cuv)
 
                 if informe_docx:
@@ -438,7 +438,7 @@ def main():
             st.download_button(
                 label="Descargar Informe",
                 data=st.session_state["informe_docx"],
-                file_name=f"informe_{st.session_state.get('input_cuv_str', 'documento')}.docx",
+                file_name=f"informe_{cuv_val}.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 key="descargar_informe"
             )

@@ -50,7 +50,7 @@ def get_visita(cuv: str) -> pd.DataFrame:
     """
     connection = get_db_connection()
     query = """
-        SELECT * FROM higiene_Visitas
+        SELECT * FROM higiene_Visitas_prod
         WHERE cuv_visita = ? 
         ORDER BY fecha_visita DESC, hora_visita DESC
     """
@@ -63,7 +63,7 @@ def get_mediciones(visita_id: int) -> pd.DataFrame:
     Obtiene las mediciones de la tabla higiene_Mediciones asociadas a la visita indicada.
     """
     connection = get_db_connection()
-    query = "SELECT * FROM higiene_mediciones WHERE visita_id = ?"
+    query = "SELECT * FROM higiene_mediciones_prod WHERE visita_id = ?"
     # Convertimos visita_id a entero (tipo int) para evitar el error de parámetro
     df = pd.read_sql(query, connection, params=[int(visita_id)])
     connection.close()
