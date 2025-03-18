@@ -87,27 +87,25 @@ def main():
     # --- Búsqueda por CUV ---
     input_cuv = st.text_input("Ingresa el CUV: ej. 183885")
     if st.button("Buscar"):
-        st.session_state["input_cuv_str"] = input_cuv.strip()
-        df_main["CUV"] = df_main["CUV"].astype(str).str.strip()
-        df_cuv_info["CUV"] = df_cuv_info["CUV"].astype(str).str.strip()
-        st.session_state["df_filtrado"] = df_main[df_main["CUV"] == st.session_state["input_cuv_str"]]
-        st.session_state["df_info_cuv"] = df_cuv_info[df_cuv_info["CUV"] == st.session_state["input_cuv_str"]]
+        cuv_ingresado = input_cuv.strip()
+        #st.session_state["input_cuv_str"] = input_cuv.strip()
+        st.session_state["df_centro"] = get_centro(cuv_ingresado)
+    df_centro = st.session_state.get("df_centro", pd.DataFrame())
+    #st.write(df_centro)
+    #st.write(df_centro)
 
-    df_filtrado = st.session_state["df_filtrado"]
-    df_info_cuv = st.session_state["df_info_cuv"]
-
-    if not df_filtrado.empty:
+    if not df_centro.empty:
         # 1. Datos generales
         st.markdown("#### Datos generales")
-        if not df_info_cuv.empty:
-            cuv_info_row = df_info_cuv.iloc[0]
-            razon_social = st.text_input("Razón Social", value=str(cuv_info_row.get("RAZÓN SOCIAL", "")))
-            rut = st.text_input("RUT", value=str(cuv_info_row.get("RUT", "")))
-            nombre_local = st.text_input("Nombre de Local", value=str(cuv_info_row.get("Nombre de Local", "")))
-            direccion = st.text_input("Dirección", value=str(cuv_info_row.get("Dirección", "")))
-            comuna = st.text_input("Comuna", value=str(cuv_info_row.get("Comuna", "")))
-            region = st.text_input("Región", value=str(cuv_info_row.get("Región", "")))
-            cuv_val = st.text_input("CUV", value=str(cuv_info_row.get("CUV", "")))
+        if not df_centro.empty:
+            centro_info = df_centro.iloc[0]
+            razon_social = st.text_input("Razón Social", value=str(centro_info.get("razon_social", "")))
+            rut = st.text_input("RUT", value=str(centro_info.get("rut", "")))
+            nombre_local = st.text_input("Nombre de Local", value=str(centro_info.get("nombre_ct", "")))
+            direccion = st.text_input("Dirección", value=str(centro_info.get("direccion_ct", "")))
+            comuna = st.text_input("Comuna", value=str(centro_info.get("comuna_ct", "")))
+            region = st.text_input("Región", value=str(centro_info.get("region_ct", "")))
+            cuv_val = st.text_input("CUV", value=str(centro_info.get("cuv", "")))
         else:
             razon_social = st.text_input("Razón Social")
             rut = st.text_input("RUT")
