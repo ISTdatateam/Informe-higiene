@@ -212,7 +212,7 @@ def main():
 
             # Guardar la visita en la base de datos
             id_visita = insertar_visita(
-                st.session_state["input_cuv_str"],
+                cuv_val,
                 fecha_visita,
                 hora_medicion,
                 temp_max,
