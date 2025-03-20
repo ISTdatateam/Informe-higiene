@@ -102,10 +102,13 @@ def main():
                 st.session_state["df_mediciones"],
                 st.session_state["df_equipos"]
             )
+            st.session_state["nombre_ct"] = df_centro.get('nombre_ct', '')
+
+
             st.download_button(
                 label="Descargar Informe",
                 data=informe_docx,
-                file_name=f"informe_{st.session_state['input_cuv']}.docx",
+                file_name=f"informe_termico_{st.session_state['input_cuv']}_{st.session_state['nombre_ct']}.docx",
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
         else:
@@ -150,9 +153,10 @@ def main():
                         df_equipos
                     )
 
+                    centro = df_centro.iloc[0]
                     # Agregar al ZIP
                     zip_file.writestr(
-                        f"informe_{cuv}.docx",
+                        f"informe_termico_{cuv}_{centro.get('nombre_ct', '')}.docx",
                         doc_bytes.getvalue()  # Asumiendo que devuelve BytesIO
                     )
 

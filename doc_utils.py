@@ -11,6 +11,7 @@ from PIL import ImageOps  # Asegúrate de tener Pillow instalado
 from io import BytesIO
 from docx.oxml.ns import qn
 from docx.enum.table import WD_ALIGN_VERTICAL
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 import requests
 import os
 from natsort import natsorted
@@ -543,8 +544,6 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
                 'mensaje': "Refrigeración activa requerida",
                 'acciones': [
                     "- Implementar [__] equipos enfriadores de aire (según las dimensiones de las áreas), con el fin de enfriar el aire.",
-                    "- Consultar con el proveedor el óptimo uso del equipo por ejemplo: periodicidad de suministrar agua helada, hielo o implemento refrigerante autorizado para el equipamiento adquirido, con el fin de estar constantemente enfriando durante toda la jornada laboral el área, especialmente en periodo de mayor temperaturas o época estival.",
-                    "- Llevar una Bitácora o Registro de la actividad en lo referido al uso de enfriador(es)."
                 ],
                 'plazo': '[__] meses desde la recepción del presente informe técnico'
             },
@@ -632,17 +631,6 @@ def generar_recomendaciones(pmv, tdb_initial, tr_initial, vr, rh, met, clo):
         'plazo': 'Continuo'
     })
 
-    # 3. Medidas administrativas (siempre aplican)
-    recomendaciones.append({
-        'tipo': 'administrativa',
-        'categoria': 'Comunicación',
-        'nivel': 'Prioridad 3',
-        'acciones': [
-            "Informar formalmente a todo el personal sobre riesgos térmicos (DS N°44)",
-            "Establecer registros firmados de capacitación"
-        ],
-        'plazo': '30 días desde la recepción del presente informe técnico'
-    })
     '''
 
     return recomendaciones
@@ -769,6 +757,16 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
                 "- Realizar mantención preventiva en los equipos de climatización, con el fin de identificar desgastes y prevenir fallas. Se debe seguir un cronograma establecido y registrar cada intervención.",
                 "- Ejecutar reparaciones en equipos de climatización al detectar fallas en su funcionamiento, restableciendo su operatividad de manera oportuna y registrando las acciones realizadas",
                 "- Implementar un monitoreo continuo de los parámetros de confort térmico entre 23 a 26°C en verano y 18 a 21 en invierno, manteniendo un registro sistemático de las mediciones y ajustes efectuados"
+                "- Consultar con el proveedor el óptimo uso del equipo por ejemplo: periodicidad de suministrar agua helada, hielo o implemento refrigerante autorizado para el equipamiento adquirido, con el fin de estar constantemente enfriando durante toda la jornada laboral el área, especialmente en periodo de mayor temperaturas o época estival.",
+                "- Llevar una Bitácora o Registro de la actividad en lo referido al uso de enfriador(es)."
+        ],
+        'plazo': '30 días desde la recepción del presente informe técnico'
+    })
+
+
+
+
+
             ],
             'plazo': 'Continuo'
         }
@@ -859,7 +857,7 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         add_row(table_empresa, "1.1 Información empresa")
         add_row(table_empresa, "Razón Social", row_centro.get('razon_social', '').lower().title())
         add_row(table_empresa, "RUT", row_centro.get('rut', ''))
-        add_row(table_empresa, "CIIU", row_centro.get('CIIU', '[COMPLETAR]'))
+        add_row(table_empresa, "CIIU", row_centro.get('CIIU', '521111. Grandes establecimientos (venta de alimentos); hipermercados'))
 
         # Espacio entre tablas (opcional)
         doc.add_paragraph()
@@ -1213,21 +1211,24 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     # Asumiendo que row_centro ya está definido y contiene la información de la empresa:
     razon_social = row_centro.get('razon_social', 'RENDIC HERMANOS S.A.')
 
+    ##CAMBIO
     # Luego, en el cuerpo del documento:
-    doc.add_paragraph(
-        "Conforme al artículo 68 de la Ley N° 16.744, la implementación de las medidas prescritas por este organismo "
-        "administrador es de carácter obligatoria, por lo que su incumplimiento podrá ser sancionado con el recargo de "
-        "la cotización adicional diferenciada, sin perjuicio de las demás sanciones que correspondan."
-    )
-    doc.add_paragraph()
-    doc.add_paragraph(
-        f"No obstante, {razon_social} podrá implementar otras medidas técnicas y/o administrativas equivalentes a las "
-        "señaladas en el presente informe y que contribuyan a disminuir la exposición de sus trabajadores, debiendo "
-        "informar a IST, quien evaluará su efectividad una vez implementadas. Adicionalmente, en el caso de que las áreas "
-        "de trabajo sean operadas por contratistas, el mandante debe informar obligatoriamente a todos sus contratistas los "
-        "riesgos a los que están expuestos."
-    )
-    doc.add_paragraph()
+    #doc.add_paragraph(
+    #    "Conforme al artículo 68 de la Ley N° 16.744, la implementación de las medidas prescritas por este organismo "
+    #    "administrador es de carácter obligatoria, por lo que su incumplimiento podrá ser sancionado con el recargo de "
+    #    "la cotización adicional diferenciada, sin perjuicio de las demás sanciones que correspondan."
+    #)
+    #doc.add_paragraph()
+    #doc.add_paragraph(
+    #    f"No obstante, {razon_social} podrá implementar otras medidas técnicas y/o administrativas equivalentes a las "
+    #    "señaladas en el presente informe y que contribuyan a disminuir la exposición de sus trabajadores, debiendo "
+    #    "informar a IST, quien evaluará su efectividad una vez implementadas. Adicionalmente, en el caso de que las áreas "
+    #    "de trabajo sean operadas por contratistas, el mandante debe informar obligatoriamente a todos sus contratistas los "
+    #    "riesgos a los que están expuestos."
+    #)
+    #doc.add_paragraph()
+    ##FINCAMBIO
+
     doc.add_paragraph(
         "Acorde a las condiciones existentes al momento de las mediciones, al resultado de las mismas y a las conclusiones "
         "obtenidas, se establecen las siguientes medidas de control:"
@@ -1261,6 +1262,31 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
         consultor_cargo = row_visita.get("consultor_cargo", "")
         consultor_zonal = row_visita.get("consultor_zonal", "")
 
+    consultor_ist_limpio = (
+        consultor_ist
+        .replace(" ", "-")
+        .replace("ñ", "n")
+        .replace("Ñ", "N")
+        .replace("á", "a")
+        .replace("é", "e")
+        .replace("í", "i")
+        .replace("ó", "o")
+        .replace("ú", "u")
+    )
+
+    firma_path = os.path.join("imagenes-firma", consultor_ist_limpio + ".png")
+
+    try:
+        paragraph = doc.add_paragraph()
+        run = paragraph.add_run()
+        run.add_picture(firma_path, width=Cm(4))
+        paragraph.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+    except FileNotFoundError:
+        print(f"La imagen no existe en la ruta especificada: {firma_path}")
+    except Exception as e:
+        print(f"Ocurrió un error al agregar la imagen: {e}")
+
+
     # Agregar párrafo para el consultor, centrado y en negrita
     p_consultor = doc.add_paragraph()
     p_consultor.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -1276,8 +1302,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     p_zonal = doc.add_paragraph()
     p_zonal.alignment = WD_ALIGN_PARAGRAPH.CENTER
     run_zonal = p_zonal.add_run(consultor_zonal)
-
-
 
     # -------------------------------
     # 6) ANEXOS
@@ -1337,7 +1361,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     set_column_width(table_calib, 3, Cm(4.25))
     format_row(table_calib.rows[0])
 
-
     doc.add_paragraph()
     doc.add_heading("b)     Caracterización de vestimenta utilizada y tasa metabólica", level=3)
 
@@ -1372,9 +1395,6 @@ def generar_informe_en_word(df_centros, df_visitas, df_mediciones, df_equipos) -
     set_column_width(tabla_caract, 1, Cm(7))
     set_column_width(tabla_caract, 2, Cm(7))
     format_row(tabla_caract.rows[0])
-
-
-
 
     # Salto de página y título del anexo
     doc.add_page_break()

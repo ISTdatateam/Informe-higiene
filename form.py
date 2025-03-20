@@ -121,13 +121,15 @@ def main():
             fecha_visita = st.date_input("Fecha de visita", value=date.today())
             hora_medicion = st.time_input("Hora de medición", value=time(hour=9, minute=0))
             temp_max = st.number_input("Temperatura máxima del día (°C)", min_value=-50.0, max_value=60.0, value=0.0, step=0.1)
+            ##CAMBIO
             motivo_evaluacion = st.selectbox("Motivo de evaluación",
-                                             options=["Seleccione...", "Programa anual", "Solicitud empresa", "Fiscalización"],
+                                             options=["Seleccione...", "Programa de trabajo", "Solicitud empresa", "Fiscalización"],
                                              index=0)
-            nombre_personal = st.text_input("Nombre del personal SMU")
+            nombre_personal = st.text_input("Nombre del personal SMU que acompaña")
             cargo = st.text_input("Cargo", value="Administador/a")
-            consultor_ist = st.text_input("Consultor IST")
-            cargo_consultor = st.selectbox("Cargo del consultor", options=["Seleccione...", "Consultor en Higiene Ocupacional", "Consultor en Prevención de Riesgos"], index=0)
+            consultor_ist = st.text_input("Nombre Consultor IST")
+            cargo_consultor = st.selectbox("Cargo", options=["Seleccione...", "Consultor en Higiene Ocupacional", "Consultor en Prevención de Riesgos"], index=0)
+            ##FINCAMBIO
             zonal_consultor = st.selectbox("Zonal del consultor", options=["Seleccione...", "Gerencia Zonal Centro - Viña del Mar", "Gerencia Zonal Sur Austral", "Gerencia Zonal Metropolitana", "Gerencia Zonal Sur", "Gerencia Zonal Norte"], index=0)
 
             st.markdown("#### Verificación de parámetros")
@@ -167,7 +169,10 @@ def main():
                                                  "T32"],
                                         index=0)
             cod_equipo_v = st.selectbox("Equipo velocidad aire",
-                                        options=["V1",
+                                        ##CAMBIO
+                                        options=["Seleccione...",
+                                        ##FINCAMBIO
+                                                 "V1",
                                                  "V2",
                                                  "V3",
                                                  "V4",
@@ -184,12 +189,16 @@ def main():
                                                  "V15",
                                                  ],
                                         index=0)
+
+            ##CAMBIO
             patron_tbs = st.number_input("Patrón TBS", value=46.4, step=0.1)
-            verif_tbs_inicial = st.number_input("Verificación TBS inicial", step=0.1)
             patron_tbh = st.number_input("Patrón TBH", value=12.7, step=0.1)
-            verif_tbh_inicial = st.number_input("Verificación TBH inicial", step=0.1)
             patron_tg = st.number_input("Patrón TG", value=69.8, step=0.1)
+            st.write()
+            verif_tbs_inicial = st.number_input("Verificación TBS inicial", step=0.1)
+            verif_tbh_inicial = st.number_input("Verificación TBH inicial", step=0.1)
             verif_tg_inicial = st.number_input("Verificación TG inicial", step=0.1)
+            ##FIN CAMBIO
             submit1 = st.form_submit_button("Guardar datos")
         if submit1:
             st.session_state["datos_generales"] = {
@@ -265,14 +274,16 @@ def main():
                         sector_especifico = st.selectbox(f"Sector específico {i}",
                                                          ["Seleccione...", "Centro", "Izquierda", "Derecha"],
                                                          key=f"espec_sector_{i}")
+                        ##CAMBIO
                         puesto_trabajo = st.selectbox(f"Puesto de trabajo {i}",
-                                                      ["Seleccione...", "Cajera", "Reponedor", "Bodeguero",
+                                                      ["Seleccione...", "Cajera(o)", "Reponedor(a)", "Bodeguero(a)",
                                                        "Recepcionista"], key=f"puesto_trabajo_{i}")
                         posicion_trabajador = st.selectbox(f"Posición {i}", ["Seleccione...", "De pie", "Sentado"],
                                                            key=f"pos_trabajador_{i}")
                         vestimenta_trabajador = st.selectbox(f"Vestimenta {i}",
-                                                             ["Seleccione...", "Habitual", "Invierno"],
+                                                             ["Seleccione...", "Ligera", "Abrigada"],
                                                              key=f"vestimenta_{i}")
+                        ##FINCAMBIO
 
                         # Mediciones
                         t_bul_seco = st.number_input(f"Temp. bulbo seco (°C) {i}", step=0.1, key=f"tbs_{i}")
