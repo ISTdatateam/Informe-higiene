@@ -740,6 +740,8 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
                     })
 
     # 2. Medidas Administrativas (siempre se incluyen)
+
+    ##CAMBIO
     medidas_administrativas = [
         {
             #'tipo_medida': 'Comunicación',
@@ -754,22 +756,16 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
             #'tipo_medida': 'Mantenimiento',
             'areas': areas_no_cumplen if areas_no_cumplen else ['Todas'],
             'acciones': [
-                "- Realizar mantención preventiva en los equipos de climatización, con el fin de identificar desgastes y prevenir fallas. Se debe seguir un cronograma establecido y registrar cada intervención.",
-                "- Ejecutar reparaciones en equipos de climatización al detectar fallas en su funcionamiento, restableciendo su operatividad de manera oportuna y registrando las acciones realizadas",
-                "- Implementar un monitoreo continuo de los parámetros de confort térmico entre 23 a 26°C en verano y 18 a 21 en invierno, manteniendo un registro sistemático de las mediciones y ajustes efectuados"
-                "- Consultar con el proveedor el óptimo uso del equipo por ejemplo: periodicidad de suministrar agua helada, hielo o implemento refrigerante autorizado para el equipamiento adquirido, con el fin de estar constantemente enfriando durante toda la jornada laboral el área, especialmente en periodo de mayor temperaturas o época estival.",
-                "- Llevar una Bitácora o Registro de la actividad en lo referido al uso de enfriador(es)."
+                "- Consultar con el proveedor el óptimo uso del equipo por ejemplo: periodicidad de suministrar agua helada, hielo o implemento refrigerante autorizado para el equipamiento adquirido, con el fin de estar constantemente enfriando durante toda la jornada laboral el área, especialmente en periodo de mayor temperaturas o época estival."
+                "- Realizar mantención preventiva en los equipos de climatización, con el fin de identificar desgastes y prevenir fallas. Se debe seguir un cronograma establecido y registrar cada intervención."
+                "- Ejecutar reparaciones en equipos de climatización al detectar fallas en su funcionamiento, restableciendo su operatividad de manera oportuna y registrando las acciones realizadas."
+                "- Implementar un monitoreo continuo de los parámetros de confort térmico entre 23 a 26°C en verano manteniendo un registro sistemático de las mediciones y ajustes efectuados."
+                "- Llevar una Bitácora o Registro de la actividad en lo referido al uso de los equipos."
         ],
-        'plazo': '30 días desde la recepción del presente informe técnico'
-    })
-
-
-
-
-
-            ],
-            'plazo': 'Continuo'
+        'plazo': '[__] dias desde la recepción del presente informe técnico'
         }
+    ##FINCAMBIO
+
     ]
 
     # Agregar secciones al documento
