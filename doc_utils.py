@@ -764,16 +764,15 @@ def agregar_medidas_correctivas(doc, df_mediciones, areas_no_cumplen):
         ],
         'plazo': '[__] dias desde la recepción del presente informe técnico'
         }
-    ##FINCAMBIO
-
     ]
 
     # Agregar secciones al documento
-    doc.add_heading("4.1 Medidas de Carácter Ingenieril", level=3)
+    doc.add_heading("4.1 Medidas de Carácter Técnico", level=3)
     if medidas_ingenieriles:
         crear_tabla_recomendaciones(doc, "Ingenieril", medidas_ingenieriles)
     else:
-        doc.add_paragraph("No se requieren medidas ingenieriles para este caso.")
+        doc.add_paragraph("No se requieren medidas técnicas para este caso.")
+    ##FINCAMBIO
 
     doc.add_paragraph()
     doc.add_heading("4.2 Medidas de Carácter Administrativo", level=3)
